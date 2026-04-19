@@ -87,26 +87,36 @@ router.get('/search', async (req, res, next) => {
 
 router.patch('/:id/status', authenticate, authorize('driver', 'admin'), validate(statusSchema), async (req, res, next) => {
   try {
-    const currentTrip = await db.query('SELECT id, status, driver_id FROM trips WHERE id = $1', [req.params.id]);
-    if (!currentTrip.rowCount) throw new HttpError(404, 'Trip not found or not owned by driver');
-
-    if (req.user.role !== 'admin' && currentTrip.rows[0].driver_id !== req.user.id) {
-      throw new HttpError(404, 'Trip not found or not owned by driver');
-    }
-
-    const currentStatus = currentTrip.rows[0].status;
     const nextStatus = req.body.status;
-    const allowedTransitions = TRIP_STATUS_TRANSITIONS[currentStatus] || [];
-    if (!allowedTransitions.includes(nextStatus)) {
-      throw new HttpError(400, `Invalid trip status transition: ${currentStatus} -> ${nextStatus}`);
-    }
-
     const result = await db.query(
       `UPDATE trips SET status = $2, updated_at = NOW()
        WHERE id = $1
-        RETURNING *`,
-      [req.params.id, nextStatus],
+         AND ($3 = 'admin' OR driver_id = $4)
+         AND (
+           (status = 'scheduled' AND $2 IN ('boarding', 'cancelled'))
+           OR (status = 'boarding' AND $2 IN ('on_trip', 'cancelled'))
+           OR (status = 'on_trip' AND $2 = 'completed')
+         )
+       RETURNING *`,
+      [req.params.id, nextStatus, req.user.role, req.user.id],
     );
+
+    if (!result.rowCount) {
+      const currentTrip = await db.query('SELECT status, driver_id FROM trips WHERE id = $1', [req.params.id]);
+      if (!currentTrip.rowCount) throw new HttpError(404, 'Trip not found');
+
+      if (req.user.role !== 'admin' && currentTrip.rows[0].driver_id !== req.user.id) {
+        throw new HttpError(404, 'Trip not found or not owned by driver');
+      }
+
+      const currentStatus = currentTrip.rows[0].status;
+      const allowedTransitions = TRIP_STATUS_TRANSITIONS[currentStatus] || [];
+      if (!allowedTransitions.includes(nextStatus)) {
+        throw new HttpError(400, `Invalid trip status transition: ${currentStatus} -> ${nextStatus}`);
+      }
+
+      throw new HttpError(409, 'Trip status update conflict, please retry');
+    }
 
     req.app.get('io').to(`trip:${req.params.id}`).emit('trip:status_updated', result.rows[0]);
     res.json(result.rows[0]);
