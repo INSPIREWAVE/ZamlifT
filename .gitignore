@@ -1,0 +1,19 @@
+# Dependencies
+**/node_modules/
+
+# Build artifacts
+**/dist/
+**/build/
+
+# Env files
+**/.env
+
+# Flutter/Dart
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/pubspec.lock
+
+# Logs
+*.log
