@@ -61,10 +61,15 @@ async function listPendingDrivers() {
   return result.rows;
 }
 
-async function getDriverProfile(driverId) {
+async function getDriverProfile(userId) {
   const result = await query(
-    'SELECT * FROM driver_profiles WHERE user_id = $1 LIMIT 1',
-    [driverId]
+    `
+      SELECT dp.*, COALESCE((to_jsonb(dp) ->> 'id')::uuid, dp.user_id) AS id
+      FROM driver_profiles dp
+      WHERE dp.user_id = $1
+      LIMIT 1
+    `,
+    [userId]
   );
   return result.rows[0] || null;
 }
