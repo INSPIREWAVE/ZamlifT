@@ -13,7 +13,7 @@ async function createTrip({ driverId, vehicleId, routeId, departureTime, seatsTo
   );
 
   if (result.rowCount === 0) {
-    const error = new Error('Trip seats cannot exceed vehicle seat capacity');
+    const error = new Error('Invalid vehicle or seats exceed vehicle capacity');
     error.status = 400;
     throw error;
   }
