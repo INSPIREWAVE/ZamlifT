@@ -13,7 +13,31 @@ async function createTrip({
   pricePerSeat,
   status,
 }) {
-  const finalAvailableSeats = availableSeats ?? seatsTotal;
+  const hasAvailableSeats = availableSeats !== undefined && availableSeats !== null;
+  const hasSeatsTotal = seatsTotal !== undefined && seatsTotal !== null;
+
+  if (!hasAvailableSeats && !hasSeatsTotal) {
+    const error = new Error('Seats must be provided');
+    error.status = 400;
+    throw error;
+  }
+
+  if (
+    (hasAvailableSeats && availableSeats <= 0)
+    || (hasSeatsTotal && seatsTotal <= 0)
+  ) {
+    const error = new Error('Seats must be greater than zero');
+    error.status = 400;
+    throw error;
+  }
+
+  if (hasAvailableSeats && hasSeatsTotal && availableSeats > seatsTotal) {
+    const error = new Error('availableSeats cannot exceed seatsTotal');
+    error.status = 400;
+    throw error;
+  }
+
+  const finalAvailableSeats = hasAvailableSeats ? availableSeats : seatsTotal;
   const finalPrice = price ?? pricePerSeat;
 
   if (!TRIP_STATUSES.has(status)) {
