@@ -1,14 +1,22 @@
 const { query } = require('../config/db');
 
-async function createTrip({ driverId, vehicleId, routeId, departureTime, seatsTotal: availableSeats, pricePerSeat: price, status }) {
+async function createTrip({ driverId, vehicleId, routeId, departureTime, seatsTotal, pricePerSeat, status }) {
   const result = await query(
     `
       INSERT INTO trips (driver_id, vehicle_id, route_id, departure_time, available_seats, price, status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      SELECT $1, $2, $3, $4, $5, $6, $7
+      FROM vehicles v
+      WHERE v.id = $2 AND $5 <= v.seat_capacity
       RETURNING *
     `,
-    [driverId, vehicleId, routeId, departureTime, availableSeats, price, status]
+    [driverId, vehicleId, routeId, departureTime, seatsTotal, pricePerSeat, status]
   );
+
+  if (result.rowCount === 0) {
+    const error = new Error('Trip seats cannot exceed vehicle seat capacity');
+    error.status = 400;
+    throw error;
+  }
 
   return result.rows[0];
 }
