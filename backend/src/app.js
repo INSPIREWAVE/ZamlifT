@@ -17,11 +17,20 @@ const adminRoutes = require('./modules/admin/admin.routes');
 const smartRoutes = require('./modules/smart/smart.routes');
 
 const app = express();
+const allowedOrigins = env.clientOrigin
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(helmet());
 app.use(
   cors({
-    origin: env.clientOrigin === '*' ? true : env.clientOrigin,
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('CORS origin not allowed'));
+    },
     credentials: true,
   }),
 );
