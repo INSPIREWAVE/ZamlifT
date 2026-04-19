@@ -61,6 +61,24 @@ async function updateTripStatus(tripId, status) {
   return result.rows[0] || null;
 }
 
+async function vehicleBelongsToDriver(vehicleId, driverId) {
+  const result = await query(
+    'SELECT id FROM vehicles WHERE id = $1 AND driver_id = $2 LIMIT 1',
+    [vehicleId, driverId]
+  );
+
+  return result.rowCount > 0;
+}
+
+async function routeExists(routeId) {
+  const result = await query(
+    'SELECT id FROM routes WHERE id = $1 LIMIT 1',
+    [routeId]
+  );
+
+  return result.rowCount > 0;
+}
+
 async function adjustTripSeats(tripId, seatDelta) {
   const result = await query(
     `
@@ -80,5 +98,7 @@ module.exports = {
   findTrips,
   getTripById,
   updateTripStatus,
+  vehicleBelongsToDriver,
+  routeExists,
   adjustTripSeats,
 };

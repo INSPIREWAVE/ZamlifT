@@ -1,44 +1,13 @@
-const { createBooking, getUserBookings, updateBookingStatus, getBookingById } = require('../models/bookingModel');
+const { getUserBookings, updateBookingStatus, getBookingById } = require('../models/bookingModel');
 const { getTripById, adjustTripSeats } = require('../models/tripModel');
-const { incrementStopPopularity } = require('../models/routeModel');
+const { createBookingWithSeatReservation } = require('../services/bookingService');
 
 async function createBookingHandler(req, res, next) {
   try {
-    const { tripId, pickupStopId, dropoffStopId, seatsBooked } = req.validated.body;
-
-    const trip = await getTripById(tripId);
-    if (!trip) {
-      return res.status(404).json({ message: 'Trip not found' });
-    }
-
-    if (!['scheduled', 'ongoing'].includes(trip.status)) {
-      return res.status(400).json({ message: 'Trip is not available for booking' });
-    }
-
-    if (trip.seats_available < seatsBooked) {
-      return res.status(400).json({ message: 'Not enough seats available' });
-    }
-
-    const totalPrice = Number(trip.price_per_seat) * seatsBooked;
-
-    const updatedTrip = await adjustTripSeats(tripId, -seatsBooked);
-    if (!updatedTrip) {
-      return res.status(400).json({ message: 'Unable to reserve seats' });
-    }
-
-    const booking = await createBooking({
-      tripId,
+    const booking = await createBookingWithSeatReservation({
+      ...req.validated.body,
       passengerId: req.user.id,
-      pickupStopId,
-      dropoffStopId,
-      seatsBooked,
-      totalPrice,
     });
-
-    await Promise.all([
-      incrementStopPopularity(pickupStopId),
-      incrementStopPopularity(dropoffStopId),
-    ]);
 
     return res.status(201).json(booking);
   } catch (error) {

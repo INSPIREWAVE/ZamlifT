@@ -4,13 +4,33 @@ const {
   findTrips,
   getTripById,
   updateTripStatus,
+  vehicleBelongsToDriver,
+  routeExists,
 } = require('../models/tripModel');
 
 async function createTripHandler(req, res, next) {
   try {
+    if (req.user.role !== 'driver') {
+      return res.status(403).json({ message: 'Only drivers can create trips' });
+    }
+
     const profile = await getDriverProfile(req.user.id);
     if (!profile || profile.verification_status !== 'approved') {
       return res.status(403).json({ message: 'Driver is not verified' });
+    }
+
+    const { vehicleId, routeId } = req.validated.body;
+    const [vehicleOwned, routeFound] = await Promise.all([
+      vehicleBelongsToDriver(vehicleId, req.user.id),
+      routeExists(routeId),
+    ]);
+
+    if (!routeFound) {
+      return res.status(404).json({ message: 'Route not found' });
+    }
+
+    if (!vehicleOwned) {
+      return res.status(403).json({ message: 'Vehicle must belong to the authenticated driver' });
     }
 
     const trip = await createTrip({
