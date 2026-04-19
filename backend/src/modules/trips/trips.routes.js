@@ -20,6 +20,14 @@ const statusSchema = Joi.object({
   status: Joi.string().valid('scheduled', 'boarding', 'on_trip', 'completed', 'cancelled').required(),
 });
 
+const TRIP_STATUS_TRANSITIONS = {
+  scheduled: ['boarding', 'cancelled'],
+  boarding: ['on_trip', 'cancelled'],
+  on_trip: ['completed'],
+  completed: [],
+  cancelled: [],
+};
+
 router.post('/', authenticate, authorize('driver'), validate(createTripSchema), async (req, res, next) => {
   try {
     const profile = await db.query('SELECT verification_status FROM driver_profiles WHERE user_id = $1', [req.user.id]);
@@ -79,13 +87,26 @@ router.get('/search', async (req, res, next) => {
 
 router.patch('/:id/status', authenticate, authorize('driver', 'admin'), validate(statusSchema), async (req, res, next) => {
   try {
+    const currentTrip = await db.query('SELECT id, status, driver_id FROM trips WHERE id = $1', [req.params.id]);
+    if (!currentTrip.rowCount) throw new HttpError(404, 'Trip not found or not owned by driver');
+
+    if (req.user.role !== 'admin' && currentTrip.rows[0].driver_id !== req.user.id) {
+      throw new HttpError(404, 'Trip not found or not owned by driver');
+    }
+
+    const currentStatus = currentTrip.rows[0].status;
+    const nextStatus = req.body.status;
+    const allowedTransitions = TRIP_STATUS_TRANSITIONS[currentStatus] || [];
+    if (!allowedTransitions.includes(nextStatus)) {
+      throw new HttpError(400, `Invalid trip status transition: ${currentStatus} -> ${nextStatus}`);
+    }
+
     const result = await db.query(
       `UPDATE trips SET status = $2, updated_at = NOW()
-       WHERE id = $1 AND ($3 = 'admin' OR driver_id = $4)
-       RETURNING *`,
-      [req.params.id, req.body.status, req.user.role, req.user.id],
+       WHERE id = $1
+        RETURNING *`,
+      [req.params.id, nextStatus],
     );
-    if (!result.rowCount) throw new HttpError(404, 'Trip not found or not owned by driver');
 
     req.app.get('io').to(`trip:${req.params.id}`).emit('trip:status_updated', result.rows[0]);
     res.json(result.rows[0]);

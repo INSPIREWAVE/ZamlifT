@@ -18,6 +18,13 @@ const statusSchema = Joi.object({
   status: Joi.string().valid('pending', 'confirmed', 'cancelled', 'completed').required(),
 });
 
+const BOOKING_STATUS_TRANSITIONS = {
+  pending: ['confirmed', 'cancelled'],
+  confirmed: ['completed', 'cancelled'],
+  cancelled: [],
+  completed: [],
+};
+
 router.post('/', authenticate, authorize('passenger'), validate(createBookingSchema), async (req, res, next) => {
   try {
     const { tripId, seatsBooked, pickupStopId, dropoffStopId } = req.body;
@@ -57,12 +64,21 @@ router.get('/me', authenticate, authorize('passenger'), async (req, res, next) =
 
 router.patch('/:id/status', authenticate, authorize('driver', 'admin'), validate(statusSchema), async (req, res, next) => {
   try {
+    const currentBooking = await db.query('SELECT id, status FROM bookings WHERE id = $1', [req.params.id]);
+    if (!currentBooking.rowCount) throw new HttpError(404, 'Booking not found');
+
+    const currentStatus = currentBooking.rows[0].status;
+    const nextStatus = req.body.status;
+    const allowedTransitions = BOOKING_STATUS_TRANSITIONS[currentStatus] || [];
+    if (!allowedTransitions.includes(nextStatus)) {
+      throw new HttpError(400, `Invalid booking status transition: ${currentStatus} -> ${nextStatus}`);
+    }
+
     const result = await db.query(
       `UPDATE bookings SET status = $2, updated_at = NOW()
        WHERE id = $1 RETURNING *`,
-      [req.params.id, req.body.status],
+      [req.params.id, nextStatus],
     );
-    if (!result.rowCount) throw new HttpError(404, 'Booking not found');
     res.json(result.rows[0]);
   } catch (error) {
     next(error);
