@@ -85,7 +85,18 @@ router.patch('/:id/status', authenticate, authorize('driver', 'admin'), validate
       }
 
       result = await db.query(updateBookingStatusQuery, [req.params.id, nextStatus]);
-      if (!result.rowCount) throw new HttpError(409, 'Booking status update conflict, please retry');
+      if (!result.rowCount) {
+        const refreshedBooking = await db.query('SELECT status FROM bookings WHERE id = $1', [req.params.id]);
+        if (!refreshedBooking.rowCount) throw new HttpError(404, 'Booking not found');
+
+        const refreshedStatus = refreshedBooking.rows[0].status;
+        const refreshedAllowedTransitions = BOOKING_STATUS_TRANSITIONS[refreshedStatus] || [];
+        if (!refreshedAllowedTransitions.includes(nextStatus)) {
+          throw new HttpError(400, `Invalid booking status transition: ${refreshedStatus} -> ${nextStatus}`);
+        }
+
+        throw new HttpError(409, 'Booking status update conflict, please retry');
+      }
     }
 
     res.json(result.rows[0]);

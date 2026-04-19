@@ -114,7 +114,22 @@ router.patch('/:id/status', authenticate, authorize('driver', 'admin'), validate
       }
 
       result = await db.query(updateTripStatusQuery, [req.params.id, nextStatus, req.user.role, req.user.id]);
-      if (!result.rowCount) throw new HttpError(409, 'Trip status update conflict, please retry');
+      if (!result.rowCount) {
+        const refreshedTrip = await db.query('SELECT status, driver_id FROM trips WHERE id = $1', [req.params.id]);
+        if (!refreshedTrip.rowCount) throw new HttpError(404, 'Trip not found');
+
+        if (req.user.role !== 'admin' && refreshedTrip.rows[0].driver_id !== req.user.id) {
+          throw new HttpError(404, 'Trip not found or not owned by driver');
+        }
+
+        const refreshedStatus = refreshedTrip.rows[0].status;
+        const refreshedAllowedTransitions = TRIP_STATUS_TRANSITIONS[refreshedStatus] || [];
+        if (!refreshedAllowedTransitions.includes(nextStatus)) {
+          throw new HttpError(400, `Invalid trip status transition: ${refreshedStatus} -> ${nextStatus}`);
+        }
+
+        throw new HttpError(409, 'Trip status update conflict, please retry');
+      }
     }
 
     req.app.get('io').to(`trip:${req.params.id}`).emit('trip:status_updated', result.rows[0]);
