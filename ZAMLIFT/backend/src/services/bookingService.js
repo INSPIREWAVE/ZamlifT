@@ -78,7 +78,7 @@ async function createBookingWithSeatReservation({
       [tripId, passengerId, pickupStopId, dropoffStopId, seatsBooked, totalPrice]
     );
 
-    const seatUpdateRes = await client.query(
+    await client.query(
       `
         UPDATE trips
         SET seats_available = seats_available - $2, updated_at = NOW()
@@ -87,10 +87,6 @@ async function createBookingWithSeatReservation({
       `,
       [tripId, seatsBooked]
     );
-
-    if (seatUpdateRes.rowCount === 0) {
-      throw httpError(500, 'Failed to update trip seats');
-    }
 
     await client.query(
       `
