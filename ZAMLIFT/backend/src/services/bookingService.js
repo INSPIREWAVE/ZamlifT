@@ -20,7 +20,7 @@ async function createBookingWithSeatReservation({
 
     const tripRes = await client.query(
       `
-        SELECT id, route_id, driver_id, status, seats_available, price_per_seat
+        SELECT *
         FROM trips
         WHERE id = $1
         FOR UPDATE
@@ -63,17 +63,7 @@ async function createBookingWithSeatReservation({
       throw httpError(400, 'Pickup stop must come before dropoff stop on the route');
     }
 
-    const seatUpdateRes = await client.query(
-      `
-        UPDATE trips
-        SET seats_available = seats_available - $2, updated_at = NOW()
-        WHERE id = $1 AND seats_available >= $2
-        RETURNING id
-      `,
-      [tripId, seatsBooked]
-    );
-
-    if (seatUpdateRes.rowCount === 0) {
+    if (trip.seats_available < seatsBooked) {
       throw httpError(400, 'Not enough seats available');
     }
 
@@ -86,6 +76,16 @@ async function createBookingWithSeatReservation({
         RETURNING *
       `,
       [tripId, passengerId, pickupStopId, dropoffStopId, seatsBooked, totalPrice]
+    );
+
+    await client.query(
+      `
+        UPDATE trips
+        SET seats_available = seats_available - $2, updated_at = NOW()
+        WHERE id = $1
+        RETURNING id
+      `,
+      [tripId, seatsBooked]
     );
 
     await client.query(
