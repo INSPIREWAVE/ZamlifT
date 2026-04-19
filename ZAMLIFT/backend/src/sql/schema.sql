@@ -94,25 +94,25 @@ BEGIN
         AND table_name = 'trips'
         AND column_name = 'status'
     ) THEN
-    UPDATE public.trips
-    SET status = 'on_trip'
-    WHERE status = 'ongoing';
-
-    SELECT tc.constraint_name
+    SELECT c.conname
     INTO status_constraint_name
-    FROM information_schema.table_constraints tc
-    JOIN information_schema.constraint_column_usage ccu
-      ON tc.constraint_schema = ccu.constraint_schema
-      AND tc.constraint_name = ccu.constraint_name
-    WHERE tc.constraint_schema = 'public'
-      AND tc.table_name = 'trips'
-      AND tc.constraint_type = 'CHECK'
-      AND ccu.column_name = 'status'
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(c.conkey)
+    WHERE n.nspname = 'public'
+      AND t.relname = 'trips'
+      AND c.contype = 'c'
+      AND a.attname = 'status'
     LIMIT 1;
 
     IF status_constraint_name IS NOT NULL THEN
       EXECUTE format('ALTER TABLE public.trips DROP CONSTRAINT %I', status_constraint_name);
     END IF;
+
+    UPDATE public.trips
+    SET status = 'on_trip'
+    WHERE status = 'ongoing';
 
     IF NOT EXISTS (
       SELECT 1
