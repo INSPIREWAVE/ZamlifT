@@ -86,31 +86,28 @@ DO $$
 DECLARE
   status_constraint_name TEXT;
 BEGIN
-  IF EXISTS (
-    SELECT 1
-    FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'trips'
-      AND column_name = 'status'
-  ) THEN
+  IF to_regclass('public.trips') IS NOT NULL
+    AND EXISTS (
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'trips'
+        AND column_name = 'status'
+    ) THEN
     UPDATE public.trips
     SET status = 'on_trip'
     WHERE status = 'ongoing';
 
-    SELECT c.conname
+    SELECT tc.constraint_name
     INTO status_constraint_name
-    FROM pg_constraint c
-    JOIN pg_class t ON t.oid = c.conrelid
-    JOIN pg_namespace n ON n.oid = t.relnamespace
-    WHERE n.nspname = 'public'
-      AND t.relname = 'trips'
-      AND c.contype = 'c'
-      AND pg_get_constraintdef(c.oid) ILIKE '%status%'
-      AND pg_get_constraintdef(c.oid) ILIKE '%scheduled%'
-      AND (
-        pg_get_constraintdef(c.oid) ILIKE '%ongoing%'
-        OR pg_get_constraintdef(c.oid) ILIKE '%on_trip%'
-      )
+    FROM information_schema.table_constraints tc
+    JOIN information_schema.constraint_column_usage ccu
+      ON tc.constraint_schema = ccu.constraint_schema
+      AND tc.constraint_name = ccu.constraint_name
+    WHERE tc.constraint_schema = 'public'
+      AND tc.table_name = 'trips'
+      AND tc.constraint_type = 'CHECK'
+      AND ccu.column_name = 'status'
     LIMIT 1;
 
     IF status_constraint_name IS NOT NULL THEN
