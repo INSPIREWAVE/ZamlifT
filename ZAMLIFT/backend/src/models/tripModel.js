@@ -1,6 +1,27 @@
 const { pool, query } = require('../config/db');
 
-async function createTrip({ driverId, vehicleId, routeId, departureTime, seatsTotal, pricePerSeat, status }) {
+const TRIP_STATUSES = new Set(['scheduled', 'boarding', 'on_trip', 'completed', 'cancelled']);
+
+async function createTrip({
+  driverId,
+  vehicleId,
+  routeId,
+  departureTime,
+  availableSeats,
+  seatsTotal,
+  price,
+  pricePerSeat,
+  status,
+}) {
+  const seatsToUse = availableSeats ?? seatsTotal;
+  const priceToUse = price ?? pricePerSeat;
+
+  if (!TRIP_STATUSES.has(status)) {
+    const error = new Error('Invalid trip status');
+    error.status = 400;
+    throw error;
+  }
+
   const result = await query(
     `
       INSERT INTO trips (driver_id, vehicle_id, route_id, departure_time, available_seats, price, status)
@@ -9,7 +30,7 @@ async function createTrip({ driverId, vehicleId, routeId, departureTime, seatsTo
       WHERE v.id = $2 AND $5 <= v.seat_capacity
       RETURNING *
     `,
-    [driverId, vehicleId, routeId, departureTime, seatsTotal, pricePerSeat, status]
+    [driverId, vehicleId, routeId, departureTime, seatsToUse, priceToUse, status]
   );
 
   if (result.rowCount === 0) {
@@ -37,13 +58,14 @@ async function findTrips({ fromStopId, toStopId, departureDate }) {
       JOIN routes r ON r.id = t.route_id
       JOIN driver_profiles dp ON dp.id = t.driver_id
       JOIN users u ON u.id = dp.user_id
-      JOIN route_stops rs_from ON rs_from.route_id = r.id
-      JOIN route_stops rs_to ON rs_to.route_id = r.id
-      WHERE rs_from.stop_id = $1
-        AND rs_to.stop_id = $2
-        AND rs_from.sequence_order < rs_to.sequence_order
-        AND DATE(t.departure_time) = $3
-        AND t.status IN ('scheduled','on_trip')
+      JOIN stops s_from ON s_from.route_id = r.id
+      JOIN stops s_to ON s_to.route_id = r.id
+      WHERE s_from.id = $1
+        AND s_to.id = $2
+        AND s_from.position < s_to.position
+        AND t.departure_time >= $3
+        AND t.departure_time < $3 + INTERVAL '1 day'
+        AND t.status IN ('scheduled', 'boarding', 'on_trip')
         AND t.available_seats > 0
       ORDER BY t.departure_time ASC
     `,
@@ -98,7 +120,7 @@ async function updateTripStatus(tripId, status) {
 
     const revenueResult = await client.query(
       `
-        SELECT COALESCE(SUM(total_price), 0)::numeric(12,2) AS total_revenue
+        SELECT COALESCE(SUM(total_amount), 0)::numeric(12,2) AS total_revenue
         FROM bookings
         WHERE trip_id = $1
           AND payment_status = 'paid'
@@ -131,17 +153,24 @@ async function updateTripStatus(tripId, status) {
   }
 }
 
-async function vehicleBelongsToDriver(vehicleId, driverProfileId) {
+async function vehicleBelongsToDriver(vehicleId, driverUserOrProfileId) {
   const result = await query(
     `
       SELECT v.id
       FROM vehicles v
-      JOIN driver_profiles dp ON dp.user_id = v.driver_id
       WHERE v.id = $1
-        AND dp.id = $2
+        AND (
+          v.driver_id = $2
+          OR v.driver_id = (
+            SELECT dp.id
+            FROM driver_profiles dp
+            WHERE dp.user_id = $2
+            LIMIT 1
+          )
+        )
       LIMIT 1
     `,
-    [vehicleId, driverProfileId]
+    [vehicleId, driverUserOrProfileId]
   );
 
   return result.rowCount > 0;
