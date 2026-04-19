@@ -81,8 +81,11 @@ async function updateTripStatusHandler(req, res, next) {
 
     if (req.user.role !== 'admin') {
       const profile = await getDriverProfile(req.user.id);
-      if (!profile || trip.driver_id !== profile.id) {
-        return res.status(403).json({ message: 'Forbidden' });
+      if (!profile) {
+        return res.status(403).json({ message: 'Driver profile not found' });
+      }
+      if (trip.driver_id !== profile.id) {
+        return res.status(403).json({ message: 'You do not have permission to modify this trip' });
       }
     }
 
