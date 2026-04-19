@@ -109,6 +109,16 @@ CREATE TABLE IF NOT EXISTS payments (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS earnings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  trip_id UUID NOT NULL UNIQUE REFERENCES trips(id) ON DELETE CASCADE,
+  driver_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  total_revenue NUMERIC(12,2) NOT NULL CHECK (total_revenue >= 0),
+  calculated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS trip_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
@@ -136,8 +146,10 @@ CREATE INDEX IF NOT EXISTS idx_stops_popularity ON stops (popularity_score DESC)
 CREATE INDEX IF NOT EXISTS idx_trips_route_departure ON trips (route_id, departure_time);
 CREATE INDEX IF NOT EXISTS idx_trips_driver ON trips (driver_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_trip ON bookings (trip_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_trip_payment_status ON bookings (trip_id, payment_status, status);
 CREATE INDEX IF NOT EXISTS idx_bookings_passenger ON bookings (passenger_id);
 CREATE INDEX IF NOT EXISTS idx_payments_booking ON payments (booking_id);
 CREATE INDEX IF NOT EXISTS idx_payments_payer ON payments (payer_id);
+CREATE INDEX IF NOT EXISTS idx_earnings_driver ON earnings (driver_id);
 CREATE INDEX IF NOT EXISTS idx_trip_messages_trip_time ON trip_messages (trip_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_driver_ratings_driver ON driver_ratings (driver_id);
