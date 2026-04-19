@@ -13,11 +13,11 @@ async function createTrip({
   pricePerSeat,
   status,
 }) {
-  const seatsToUse = availableSeats ?? seatsTotal;
-  const priceToUse = price ?? pricePerSeat;
+  const finalAvailableSeats = availableSeats ?? seatsTotal;
+  const finalPrice = price ?? pricePerSeat;
 
   if (!TRIP_STATUSES.has(status)) {
-    const error = new Error('Invalid trip status');
+    const error = new Error(`Invalid trip status. Must be one of: ${Array.from(TRIP_STATUSES).join(', ')}`);
     error.status = 400;
     throw error;
   }
@@ -30,7 +30,7 @@ async function createTrip({
       WHERE v.id = $2 AND $5 <= v.seat_capacity
       RETURNING *
     `,
-    [driverId, vehicleId, routeId, departureTime, seatsToUse, priceToUse, status]
+    [driverId, vehicleId, routeId, departureTime, finalAvailableSeats, finalPrice, status]
   );
 
   if (result.rowCount === 0) {
@@ -153,7 +153,7 @@ async function updateTripStatus(tripId, status) {
   }
 }
 
-async function vehicleBelongsToDriver(vehicleId, driverUserOrProfileId) {
+async function vehicleBelongsToDriver(vehicleId, driverIdentifier) {
   const result = await query(
     `
       SELECT v.id
@@ -170,7 +170,7 @@ async function vehicleBelongsToDriver(vehicleId, driverUserOrProfileId) {
         )
       LIMIT 1
     `,
-    [vehicleId, driverUserOrProfileId]
+    [vehicleId, driverIdentifier]
   );
 
   return result.rowCount > 0;
