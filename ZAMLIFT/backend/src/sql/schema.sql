@@ -146,6 +146,7 @@ CREATE INDEX IF NOT EXISTS idx_stops_popularity ON stops (popularity_score DESC)
 CREATE INDEX IF NOT EXISTS idx_trips_route_departure ON trips (route_id, departure_time);
 CREATE INDEX IF NOT EXISTS idx_trips_driver ON trips (driver_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_trip ON bookings (trip_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_trip_payment_status ON bookings (trip_id, payment_status, status);
 CREATE INDEX IF NOT EXISTS idx_bookings_passenger ON bookings (passenger_id);
 CREATE INDEX IF NOT EXISTS idx_payments_booking ON payments (booking_id);
 CREATE INDEX IF NOT EXISTS idx_payments_payer ON payments (payer_id);
