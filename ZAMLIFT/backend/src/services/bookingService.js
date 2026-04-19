@@ -35,34 +35,45 @@ async function createBookingWithSeatReservation({
       throw httpError(404, 'Trip not found');
     }
 
-    if (!['scheduled', 'on_trip'].includes(trip.status)) {
+    if (!['scheduled', 'boarding', 'on_trip'].includes(trip.status)) {
       throw httpError(400, 'Trip is not available for booking');
     }
 
-    if (trip.driver_id === passengerId) {
+    const passengerDriverProfileRes = await client.query(
+      `
+        SELECT id
+        FROM driver_profiles
+        WHERE user_id = $1
+        LIMIT 1
+      `,
+      [passengerId]
+    );
+    const passengerDriverProfileId = passengerDriverProfileRes.rows[0]?.id;
+
+    if (passengerDriverProfileId && passengerDriverProfileId === trip.driver_id) {
       throw httpError(400, 'Driver cannot book own trip');
     }
 
-    const routeStopsRes = await client.query(
+    const stopsRes = await client.query(
       `
-        SELECT stop_id, sequence_order
-        FROM route_stops
+        SELECT id, position
+        FROM stops
         WHERE route_id = $1
-          AND stop_id = ANY($2::uuid[])
+          AND id = ANY($2::uuid[])
       `,
       [trip.route_id, [pickupStopId, dropoffStopId]]
     );
 
     const pickupStopIdText = String(pickupStopId);
     const dropoffStopIdText = String(dropoffStopId);
-    const pickupStop = routeStopsRes.rows.find((row) => String(row.stop_id) === pickupStopIdText);
-    const dropoffStop = routeStopsRes.rows.find((row) => String(row.stop_id) === dropoffStopIdText);
+    const pickupStop = stopsRes.rows.find((row) => String(row.id) === pickupStopIdText);
+    const dropoffStop = stopsRes.rows.find((row) => String(row.id) === dropoffStopIdText);
 
     if (!pickupStop || !dropoffStop) {
       throw httpError(400, 'Pickup and dropoff stops must belong to the trip route');
     }
 
-    if (pickupStop.sequence_order >= dropoffStop.sequence_order) {
+    if (pickupStop.position >= dropoffStop.position) {
       throw httpError(400, 'Pickup stop must come before dropoff stop on the route');
     }
 
@@ -70,15 +81,15 @@ async function createBookingWithSeatReservation({
       throw httpError(400, 'Not enough seats available');
     }
 
-    const totalPrice = Number(trip.price) * seatsBooked;
+    const totalAmount = Number(trip.price) * seatsBooked;
 
     const bookingRes = await client.query(
       `
-        INSERT INTO bookings (trip_id, passenger_id, pickup_stop_id, dropoff_stop_id, seats_booked, total_price, status, payment_status)
+        INSERT INTO bookings (trip_id, passenger_id, pickup_stop_id, dropoff_stop_id, seats_booked, total_amount, status, payment_status)
         VALUES ($1, $2, $3, $4, $5, $6, 'pending', 'pending')
         RETURNING *
       `,
-      [tripId, passengerId, pickupStopId, dropoffStopId, seatsBooked, totalPrice]
+      [tripId, passengerId, pickupStopId, dropoffStopId, seatsBooked, totalAmount]
     );
 
     const seatReservationRes = await client.query(
