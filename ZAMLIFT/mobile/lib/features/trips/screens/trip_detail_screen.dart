@@ -65,7 +65,15 @@ class _TripCard extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => _showBookingDialog(context, trip),
+                  onPressed: () async {
+                    // Pre-load stops for this route so the dialog
+                    // can present proper stop selectors.
+                    await context
+                        .read<TripProvider>()
+                        .loadStopsForRoute(trip.routeId);
+                    if (!context.mounted) return;
+                    _showBookingDialog(context, trip);
+                  },
                   child: const Text('Book Now'),
                 ),
               ),
@@ -77,42 +85,82 @@ class _TripCard extends StatelessWidget {
 
   void _showBookingDialog(BuildContext context, Trip trip) {
     int seats = 1;
+    String? pickupStopId;
+    String? dropoffStopId;
+    final provider = context.read<TripProvider>();
+    final stops = provider.stops;
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
           title: const Text('Confirm Booking'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Route: ${trip.routeName ?? "–"}'),
-              Text('Price/seat: ZMW ${trip.pricePerSeat.toStringAsFixed(2)}'),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      if (seats > 1) setState(() => seats--);
-                    },
-                    icon: const Icon(Icons.remove),
-                  ),
-                  Text('$seats', style: const TextStyle(fontSize: 18)),
-                  IconButton(
-                    onPressed: () {
-                      if (seats < trip.seatsAvailable && seats < 10) {
-                        setState(() => seats++);
-                      }
-                    },
-                    icon: const Icon(Icons.add),
-                  ),
-                ],
-              ),
-              Text(
-                'Total: ZMW ${(trip.pricePerSeat * seats).toStringAsFixed(2)}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Route: ${trip.routeName ?? "–"}'),
+                Text('Price/seat: ZMW ${trip.pricePerSeat.toStringAsFixed(2)}'),
+                const SizedBox(height: 12),
+                // Pick-up stop selector
+                const Text('Pick-up stop:',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+                DropdownButton<String>(
+                  isExpanded: true,
+                  hint: const Text('Select stop'),
+                  value: pickupStopId,
+                  items: stops
+                      .map((s) => DropdownMenuItem(
+                            value: s.id,
+                            child: Text(s.displayName),
+                          ))
+                      .toList(),
+                  onChanged: (v) => setState(() => pickupStopId = v),
+                ),
+                const SizedBox(height: 8),
+                // Drop-off stop selector
+                const Text('Drop-off stop:',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+                DropdownButton<String>(
+                  isExpanded: true,
+                  hint: const Text('Select stop'),
+                  value: dropoffStopId,
+                  items: stops
+                      .map((s) => DropdownMenuItem(
+                            value: s.id,
+                            child: Text(s.displayName),
+                          ))
+                      .toList(),
+                  onChanged: (v) => setState(() => dropoffStopId = v),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        if (seats > 1) setState(() => seats--);
+                      },
+                      icon: const Icon(Icons.remove),
+                    ),
+                    Text('$seats', style: const TextStyle(fontSize: 18)),
+                    IconButton(
+                      onPressed: () {
+                        if (seats < trip.seatsAvailable && seats < 10) {
+                          setState(() => seats++);
+                        }
+                      },
+                      icon: const Icon(Icons.add),
+                    ),
+                  ],
+                ),
+                Text(
+                  'Total: ZMW ${(trip.pricePerSeat * seats).toStringAsFixed(2)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -121,16 +169,28 @@ class _TripCard extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () async {
+                if (pickupStopId == null || dropoffStopId == null) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please select both stops'),
+                    ),
+                  );
+                  return;
+                }
+                if (pickupStopId == dropoffStopId) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(
+                      content: Text('Pick-up and drop-off must differ'),
+                    ),
+                  );
+                  return;
+                }
                 Navigator.of(ctx).pop();
-                // Pickup/dropoff stops default to route endpoints; in a full
-                // implementation a stop-picker would appear here. We pass the
-                // trip's route_id — the user should select stops in a
-                // dedicated flow. For now we surface the payment screen.
                 final booking =
                     await context.read<BookingProvider>().createBooking(
                           tripId: trip.id,
-                          pickupStopId: trip.routeId, // placeholder
-                          dropoffStopId: trip.routeId, // placeholder
+                          pickupStopId: pickupStopId!,
+                          dropoffStopId: dropoffStopId!,
                           seatsBooked: seats,
                         );
                 if (!context.mounted) return;

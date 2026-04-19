@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/models/route.dart';
 import '../../../core/models/stop.dart';
@@ -58,10 +59,7 @@ class TripProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final dateStr =
-          '${departureDate.year.toString().padLeft(4, '0')}'
-          '-${departureDate.month.toString().padLeft(2, '0')}'
-          '-${departureDate.day.toString().padLeft(2, '0')}';
+      final dateStr = DateFormat('yyyy-MM-dd').format(departureDate);
       _searchResults = await _tripService.searchTrips(
         fromStopId: fromStopId,
         toStopId: toStopId,

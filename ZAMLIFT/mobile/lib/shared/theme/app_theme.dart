@@ -5,6 +5,9 @@ class AppTheme {
 
   static const _primaryColor = Color(0xFF1B6CA8); // ZamLift blue
   static const _accentColor = Color(0xFFF4A01C); // amber accent
+  static const _buttonShape = RoundedRectangleBorder(
+    borderRadius: BorderRadius.all(Radius.circular(8)),
+  );
 
   static ThemeData get light => ThemeData(
         useMaterial3: true,
@@ -20,9 +23,7 @@ class AppTheme {
             backgroundColor: _primaryColor,
             foregroundColor: Colors.white,
             minimumSize: const Size.fromHeight(48),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(8)),
-            ),
+            shape: _buttonShape,
           ),
         ),
         inputDecorationTheme: const InputDecorationTheme(
@@ -46,9 +47,7 @@ class AppTheme {
             backgroundColor: _primaryColor,
             foregroundColor: Colors.white,
             minimumSize: const Size.fromHeight(48),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(8)),
-            ),
+            shape: _buttonShape,
           ),
         ),
         inputDecorationTheme: const InputDecorationTheme(
