@@ -66,11 +66,11 @@ async function createBookingWithSeatReservation({
       throw httpError(400, 'Pickup stop must come before dropoff stop on the route');
     }
 
-    if (trip.seats_available < seatsBooked) {
+    if (trip.available_seats < seatsBooked) {
       throw httpError(400, 'Not enough seats available');
     }
 
-    const totalPrice = Number(trip.price_per_seat) * seatsBooked;
+    const totalPrice = Number(trip.price) * seatsBooked;
 
     const bookingRes = await client.query(
       `
@@ -81,15 +81,19 @@ async function createBookingWithSeatReservation({
       [tripId, passengerId, pickupStopId, dropoffStopId, seatsBooked, totalPrice]
     );
 
-    await client.query(
+    const seatReservationRes = await client.query(
       `
         UPDATE trips
-        SET seats_available = seats_available - $2, updated_at = NOW()
-        WHERE id = $1
+        SET available_seats = available_seats - $2, updated_at = NOW()
+        WHERE id = $1 AND available_seats >= $2
         RETURNING id
       `,
       [tripId, seatsBooked]
     );
+
+    if (seatReservationRes.rowCount === 0) {
+      throw httpError(409, 'Unable to reserve seats: insufficient availability or concurrent booking conflict');
+    }
 
     await client.query(
       `
@@ -148,10 +152,13 @@ async function updateBookingStatusWithSeatAdjustment({
     if (status === BOOKING_STATUS_CANCELLED && booking.status !== BOOKING_STATUS_CANCELLED) {
       const seatUpdateRes = await client.query(
         `
-          UPDATE trips
-          SET seats_available = seats_available + $2, updated_at = NOW()
-          WHERE id = $1 AND seats_available + $2 <= seats_total
-          RETURNING id
+          UPDATE trips t
+          SET available_seats = t.available_seats + $2, updated_at = NOW()
+          FROM vehicles v
+          WHERE t.id = $1
+            AND t.vehicle_id = v.id
+            AND t.available_seats + $2 <= v.seat_capacity
+          RETURNING t.id
         `,
         [booking.trip_id, booking.seats_booked]
       );
