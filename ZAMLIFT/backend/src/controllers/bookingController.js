@@ -1,6 +1,9 @@
-const { getUserBookings, updateBookingStatus, getBookingById } = require('../models/bookingModel');
-const { getTripById, adjustTripSeats } = require('../models/tripModel');
-const { createBookingWithSeatReservation } = require('../services/bookingService');
+const { getUserBookings, getBookingById } = require('../models/bookingModel');
+const { getTripById } = require('../models/tripModel');
+const {
+  createBookingWithSeatReservation,
+  updateBookingStatusWithSeatAdjustment,
+} = require('../services/bookingService');
 
 async function createBookingHandler(req, res, next) {
   try {
@@ -43,11 +46,10 @@ async function updateBookingStatusHandler(req, res, next) {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
-    const updated = await updateBookingStatus(bookingId, status);
-
-    if (status === 'cancelled') {
-      await adjustTripSeats(booking.trip_id, booking.seats_booked);
-    }
+    const updated = await updateBookingStatusWithSeatAdjustment({
+      bookingId,
+      status,
+    });
 
     return res.json(updated);
   } catch (error) {
