@@ -131,7 +131,7 @@ async function updateTripStatus(tripId, status) {
   }
 }
 
-async function vehicleBelongsToDriver(vehicleId, driverId) {
+async function vehicleBelongsToDriver(vehicleId, driverProfileId) {
   const result = await query(
     `
       SELECT v.id
@@ -141,7 +141,7 @@ async function vehicleBelongsToDriver(vehicleId, driverId) {
         AND dp.id = $2
       LIMIT 1
     `,
-    [vehicleId, driverId]
+    [vehicleId, driverProfileId]
   );
 
   return result.rowCount > 0;
