@@ -15,10 +15,10 @@ async function createTripHandler(req, res, next) {
     }
 
     const profile = await getDriverProfile(req.user.id);
-    if (!profile || profile.verification_status !== 'approved') {
+    const driverProfileId = profile?.id;
+    if (!profile || !driverProfileId || profile.verification_status !== 'approved') {
       return res.status(403).json({ message: 'Driver is not verified' });
     }
-    const driverProfileId = profile.id;
 
     const { vehicleId, routeId } = req.validated.body;
     const [vehicleOwned, routeFound] = await Promise.all([
