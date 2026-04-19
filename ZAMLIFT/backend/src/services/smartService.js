@@ -19,7 +19,7 @@ async function getRoutePriceSuggestion(routeId) {
   const result = await query(
     `
       SELECT
-        COALESCE(AVG(b.total_price / NULLIF(b.seats_booked, 0)), 0)::numeric(10,2) AS avg_price_per_seat,
+        AVG(b.total_price / NULLIF(b.seats_booked, 0))::numeric(10,2) AS avg_price_per_seat,
         COUNT(*)::int AS booking_count
       FROM bookings b
       JOIN trips t ON t.id = b.trip_id
@@ -32,7 +32,8 @@ async function getRoutePriceSuggestion(routeId) {
 
   return {
     routeId,
-    suggestedPricePerSeat: Number(row.avg_price_per_seat),
+    suggestedPricePerSeat:
+      row.avg_price_per_seat === null ? null : Number(row.avg_price_per_seat),
     historicalBookingCount: row.booking_count,
   };
 }

@@ -1,5 +1,9 @@
 function notFound(req, res, next) {
-  res.status(404).json({ message: `Route not found: ${req.originalUrl}` });
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ message: 'Resource not found' });
+  }
+
+  return res.status(404).json({ message: `Route not found: ${req.originalUrl}` });
 }
 
 function errorHandler(err, req, res, next) {

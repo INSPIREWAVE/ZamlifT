@@ -1,6 +1,7 @@
 const { z } = require('zod');
 
 const uuid = z.string().uuid();
+const maxVehicleYear = new Date().getUTCFullYear() + 2;
 
 const authRegisterSchema = z.object({
   body: z.object({
@@ -36,7 +37,7 @@ const vehicleSchema = z.object({
   body: z.object({
     make: z.string().min(2),
     model: z.string().min(1),
-    year: z.number().int().min(1980).max(2100),
+    year: z.number().int().min(1980).max(maxVehicleYear),
     plateNumber: z.string().min(3),
     seatCapacity: z.number().int().min(1).max(100),
   }),
