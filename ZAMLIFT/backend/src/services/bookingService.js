@@ -1,4 +1,6 @@
 const { pool } = require('../config/db');
+const BOOKING_STATUS_CANCELLED = 'cancelled';
+const ALLOWED_BOOKING_STATUSES = new Set(['pending', 'confirmed', BOOKING_STATUS_CANCELLED, 'completed']);
 
 function httpError(status, message) {
   const error = new Error(message);
@@ -108,4 +110,65 @@ async function createBookingWithSeatReservation({
   }
 }
 
-module.exports = { createBookingWithSeatReservation };
+async function updateBookingStatusWithSeatAdjustment({
+  bookingId,
+  status,
+}) {
+  if (!ALLOWED_BOOKING_STATUSES.has(status)) {
+    throw httpError(400, 'Invalid booking status');
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const bookingRes = await client.query(
+      `
+        SELECT id, trip_id, seats_booked, status
+        FROM bookings
+        WHERE id = $1
+        FOR UPDATE
+      `,
+      [bookingId]
+    );
+
+    const booking = bookingRes.rows[0];
+    if (!booking) {
+      throw httpError(404, 'Booking not found');
+    }
+
+    const bookingUpdateRes = await client.query(
+      'UPDATE bookings SET status = $2, updated_at = NOW() WHERE id = $1 RETURNING *',
+      [bookingId, status]
+    );
+
+    const updatedBooking = bookingUpdateRes.rows[0];
+
+    if (status === BOOKING_STATUS_CANCELLED && booking.status !== BOOKING_STATUS_CANCELLED) {
+      const seatUpdateRes = await client.query(
+        `
+          UPDATE trips
+          SET seats_available = seats_available + $2, updated_at = NOW()
+          WHERE id = $1 AND seats_available + $2 <= seats_total
+          RETURNING id
+        `,
+        [booking.trip_id, booking.seats_booked]
+      );
+
+      if (seatUpdateRes.rowCount === 0) {
+        throw httpError(409, 'Unable to restore seats due to invalid trip seat state');
+      }
+    }
+
+    await client.query('COMMIT');
+    return updatedBooking;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { createBookingWithSeatReservation, updateBookingStatusWithSeatAdjustment };
