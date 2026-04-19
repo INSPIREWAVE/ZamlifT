@@ -5,28 +5,25 @@ ZamLift is a full-stack ride-sharing platform focused on inter-city travel where
 ## Repository Layout
 
 ```
-├── backend/          Node.js + Express + PostgreSQL API (JWT auth, trips, bookings, payments, ratings, Socket.io, admin, smart suggestions)
-├── mobile/           Flutter mobile client (auth, trip search, booking, chat — initial scaffold)
-├── admin/            React dashboard for monitoring users, driver approvals, trips, and payments
-└── ZAMLIFT/
-    ├── backend/      Production-hardened backend with security, logic, and data-integrity fixes
-    └── mobile/       Complete Flutter app wired to every backend endpoint
+├── backend/      Node.js + Express + PostgreSQL API (JWT auth, trips, bookings, payments, ratings, Socket.io, admin, smart suggestions)
+├── mobile/       Complete Flutter app wired to every backend endpoint
+└── admin/        React dashboard for monitoring users, driver approvals, trips, and payments
 ```
 
 ## Quick Start
 
-### Backend (`ZAMLIFT/backend/` — recommended, fully fixed)
+### Backend
 ```bash
-cd ZAMLIFT/backend
+cd backend
 cp .env.example .env   # fill in DATABASE_URL and JWT_SECRET
 npm install
 psql "$DATABASE_URL" -f src/sql/schema.sql
 npm run dev
 ```
 
-### Flutter App (`ZAMLIFT/mobile/` — complete client)
+### Flutter App
 ```bash
-cd ZAMLIFT/mobile
+cd mobile
 flutter pub get
 flutter run
 ```
@@ -34,14 +31,6 @@ flutter run
 > For the Android emulator the default `baseUrl` is `http://10.0.2.2:5000`.  
 > For a physical device update `ApiConstants.baseUrl` in  
 > `lib/core/constants/api_constants.dart` or call `ApiConstants.configure(url)` from `main.dart`.
-
-### Backend (`backend/` — original scaffold)
-```bash
-cd backend
-cp .env.example .env
-npm install
-npm run dev
-```
 
 ### Admin Dashboard
 ```bash
