@@ -1,46 +1,44 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 
-const env = require('./config/env');
-const errorHandler = require('./middlewares/errorHandler');
-const authRoutes = require('./modules/auth/auth.routes');
-const driverRoutes = require('./modules/drivers/drivers.routes');
-const routeRoutes = require('./modules/routes/routes.routes');
-const tripRoutes = require('./modules/trips/trips.routes');
-const bookingRoutes = require('./modules/bookings/bookings.routes');
-const paymentRoutes = require('./modules/payments/payments.routes');
-const ratingRoutes = require('./modules/ratings/ratings.routes');
-const adminRoutes = require('./modules/admin/admin.routes');
-const smartRoutes = require('./modules/smart/smart.routes');
+const authRoutes = require('./routes/authRoutes');
+const driverRoutes = require('./routes/driverRoutes');
+const routeRoutes = require('./routes/routeRoutes');
+const tripRoutes = require('./routes/tripRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const ratingRoutes = require('./routes/ratingRoutes');
+const smartRoutes = require('./routes/smartRoutes');
+const chatRoutes = require('./routes/chatRoutes');
+const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 const app = express();
-const allowedOrigins = env.clientOrigin
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 app.use(helmet());
 app.use(
   cors({
-    origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error('CORS origin not allowed'));
-    },
+    origin: process.env.CLIENT_ORIGIN?.split(',') || ['http://localhost:5173'],
     credentials: true,
-  }),
+  })
 );
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 400 }));
 app.use(express.json({ limit: '1mb' }));
-app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
-
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'ZamLift API' });
+app.use(express.urlencoded({ extended: false }));
+app.use(morgan('combined'));
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', service: 'zamlift-backend' });
 });
+
+app.use('/api', limiter);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/drivers', driverRoutes);
@@ -49,15 +47,10 @@ app.use('/api/trips', tripRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/ratings', ratingRoutes);
-app.use('/api/admin', adminRoutes);
 app.use('/api/smart', smartRoutes);
+app.use('/api/chat', chatRoutes);
 
-app.use((_req, _res, next) => {
-  const err = new Error('Not found');
-  err.status = 404;
-  next(err);
-});
-
+app.use(notFound);
 app.use(errorHandler);
 
 module.exports = app;

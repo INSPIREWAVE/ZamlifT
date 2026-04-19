@@ -1,12 +1,17 @@
 const { Pool } = require('pg');
-const env = require('./env');
 
 const pool = new Pool({
-  connectionString: env.databaseUrl,
-  ssl: env.nodeEnv === 'production' ? { rejectUnauthorized: false } : false,
+  connectionString: process.env.DATABASE_URL,
+  ssl:
+    process.env.NODE_ENV === 'production'
+      ? { rejectUnauthorized: false }
+      : false,
 });
 
-module.exports = {
-  query: (text, params) => pool.query(text, params),
-  pool,
-};
+pool.on('error', (err) => {
+  console.error('Unexpected PostgreSQL pool error:', err);
+});
+
+const query = (text, params = []) => pool.query(text, params);
+
+module.exports = { pool, query };
