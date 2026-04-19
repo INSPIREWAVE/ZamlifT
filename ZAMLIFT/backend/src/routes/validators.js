@@ -113,7 +113,7 @@ const tripIdSchema = z.object({
 const updateTripStatusSchema = z.object({
   params: z.object({ tripId: uuid }),
   body: z.object({
-    status: z.enum(['scheduled', 'ongoing', 'completed', 'cancelled']),
+    status: z.enum(['scheduled', 'on_trip', 'completed', 'cancelled']),
   }),
   query: z.object({}).optional(),
 });

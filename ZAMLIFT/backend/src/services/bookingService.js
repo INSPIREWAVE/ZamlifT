@@ -35,7 +35,7 @@ async function createBookingWithSeatReservation({
       throw httpError(404, 'Trip not found');
     }
 
-    if (!['scheduled', 'ongoing'].includes(trip.status)) {
+    if (!['scheduled', 'on_trip'].includes(trip.status)) {
       throw httpError(400, 'Trip is not available for booking');
     }
 

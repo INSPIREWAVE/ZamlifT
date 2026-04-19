@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS trips (
   seats_total INT NOT NULL CHECK (seats_total > 0),
   seats_available INT NOT NULL CHECK (seats_available >= 0),
   price_per_seat NUMERIC(10,2) NOT NULL CHECK (price_per_seat > 0),
-  status VARCHAR(20) NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'ongoing', 'completed', 'cancelled')),
+  status VARCHAR(20) NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'on_trip', 'completed', 'cancelled')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

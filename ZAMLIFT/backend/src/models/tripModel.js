@@ -27,7 +27,7 @@ async function findTrips({ fromStopId, toStopId, departureDate }) {
         AND rs_to.stop_id = $2
         AND rs_from.sequence_order < rs_to.sequence_order
         AND DATE(t.departure_time) = $3
-        AND t.status IN ('scheduled','ongoing')
+        AND t.status IN ('scheduled','on_trip')
         AND t.seats_available > 0
       ORDER BY t.departure_time ASC
     `,
