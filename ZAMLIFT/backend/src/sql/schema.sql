@@ -77,10 +77,59 @@ CREATE TABLE IF NOT EXISTS trips (
   seats_total INT NOT NULL CHECK (seats_total > 0),
   seats_available INT NOT NULL CHECK (seats_available >= 0),
   price_per_seat NUMERIC(10,2) NOT NULL CHECK (price_per_seat > 0),
-  status VARCHAR(20) NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'ongoing', 'completed', 'cancelled')),
+  status VARCHAR(20) NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'on_trip', 'completed', 'cancelled')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+DO $$
+DECLARE
+  status_constraint_name TEXT;
+BEGIN
+  IF to_regclass('public.trips') IS NOT NULL
+    AND EXISTS (
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'trips'
+        AND column_name = 'status'
+    ) THEN
+    SELECT c.conname
+    INTO status_constraint_name
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(c.conkey)
+    WHERE n.nspname = 'public'
+      AND t.relname = 'trips'
+      AND c.contype = 'c'
+      AND a.attname = 'status'
+    LIMIT 1;
+
+    IF status_constraint_name IS NOT NULL THEN
+      EXECUTE format('ALTER TABLE public.trips DROP CONSTRAINT %I', status_constraint_name);
+    END IF;
+
+    UPDATE public.trips
+    SET status = 'on_trip'
+    WHERE status = 'ongoing';
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM pg_constraint c
+      JOIN pg_class t ON t.oid = c.conrelid
+      JOIN pg_namespace n ON n.oid = t.relnamespace
+      WHERE n.nspname = 'public'
+        AND t.relname = 'trips'
+        AND c.conname = 'trips_status_check'
+    ) THEN
+      ALTER TABLE public.trips
+      ADD CONSTRAINT trips_status_check
+      CHECK (status IN ('scheduled', 'on_trip', 'completed', 'cancelled'));
+    END IF;
+  END IF;
+END
+$$;
 
 CREATE TABLE IF NOT EXISTS bookings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -43,7 +43,7 @@ async function findTrips({ fromStopId, toStopId, departureDate }) {
         AND rs_to.stop_id = $2
         AND rs_from.sequence_order < rs_to.sequence_order
         AND DATE(t.departure_time) = $3
-        AND t.status IN ('scheduled','ongoing')
+        AND t.status IN ('scheduled','on_trip')
         AND t.available_seats > 0
       ORDER BY t.departure_time ASC
     `,
@@ -131,7 +131,7 @@ async function updateTripStatus(tripId, status) {
   }
 }
 
-async function vehicleBelongsToDriver(vehicleId, driverId) {
+async function vehicleBelongsToDriver(vehicleId, driverProfileId) {
   const result = await query(
     `
       SELECT v.id
@@ -141,7 +141,7 @@ async function vehicleBelongsToDriver(vehicleId, driverId) {
         AND dp.id = $2
       LIMIT 1
     `,
-    [vehicleId, driverId]
+    [vehicleId, driverProfileId]
   );
 
   return result.rowCount > 0;
