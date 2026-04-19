@@ -94,8 +94,8 @@ async function updateTripStatus(tripId, status) {
 
     await client.query(
       `
-        INSERT INTO earnings (trip_id, driver_id, total_revenue, calculated_at, updated_at)
-        VALUES ($1, $2, $3, NOW(), NOW())
+        INSERT INTO earnings (trip_id, driver_id, total_revenue)
+        VALUES ($1, $2, $3)
         ON CONFLICT (trip_id)
         DO UPDATE SET
           total_revenue = EXCLUDED.total_revenue,
