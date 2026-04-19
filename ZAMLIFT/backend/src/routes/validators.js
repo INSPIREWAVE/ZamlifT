@@ -124,6 +124,9 @@ const createBookingSchema = z.object({
     pickupStopId: uuid,
     dropoffStopId: uuid,
     seatsBooked: z.number().int().min(1).max(10),
+  }).refine((data) => data.pickupStopId !== data.dropoffStopId, {
+    message: 'Pickup and dropoff stops must be different',
+    path: ['dropoffStopId'],
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional(),
