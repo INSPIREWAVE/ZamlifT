@@ -63,10 +63,6 @@ async function createBookingWithSeatReservation({
       throw httpError(400, 'Pickup stop must come before dropoff stop on the route');
     }
 
-    if (seatsBooked > trip.seats_available) {
-      throw httpError(400, 'Not enough seats available');
-    }
-
     const seatUpdateRes = await client.query(
       `
         UPDATE trips

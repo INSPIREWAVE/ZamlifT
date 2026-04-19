@@ -30,7 +30,7 @@ async function createTripHandler(req, res, next) {
     }
 
     if (!vehicleOwned) {
-      return res.status(400).json({ message: 'Vehicle must belong to the authenticated driver' });
+      return res.status(403).json({ message: 'Vehicle must belong to the authenticated driver' });
     }
 
     const trip = await createTrip({
