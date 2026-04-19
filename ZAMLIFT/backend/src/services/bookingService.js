@@ -51,8 +51,10 @@ async function createBookingWithSeatReservation({
       [trip.route_id, [pickupStopId, dropoffStopId]]
     );
 
-    const pickupStop = routeStopsRes.rows.find((row) => row.stop_id === pickupStopId);
-    const dropoffStop = routeStopsRes.rows.find((row) => row.stop_id === dropoffStopId);
+    const pickupStopIdText = String(pickupStopId);
+    const dropoffStopIdText = String(dropoffStopId);
+    const pickupStop = routeStopsRes.rows.find((row) => String(row.stop_id) === pickupStopIdText);
+    const dropoffStop = routeStopsRes.rows.find((row) => String(row.stop_id) === dropoffStopIdText);
 
     if (!pickupStop || !dropoffStop) {
       throw httpError(400, 'Pickup and dropoff stops must belong to the trip route');
