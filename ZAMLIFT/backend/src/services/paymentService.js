@@ -1,7 +1,8 @@
+const { v4: uuidv4 } = require('uuid');
 const { query } = require('../config/db');
 
 async function createDeposit({ bookingId, payerId, amount, phoneNumber }) {
-  const ref = `MM-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+  const ref = `MM-${uuidv4()}`;
 
   const result = await query(
     `

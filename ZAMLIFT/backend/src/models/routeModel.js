@@ -22,16 +22,12 @@ async function listRoutes() {
 }
 
 async function createStop({ name, city, latitude, longitude }) {
-  const existing = await query(
-    'SELECT * FROM stops WHERE name = $1 AND city = $2 LIMIT 1',
-    [name, city]
-  );
-  if (existing.rowCount > 0) return existing.rows[0];
-
   const result = await query(
     `
       INSERT INTO stops (name, city, latitude, longitude, popularity_score)
       VALUES ($1, $2, $3, $4, 0)
+      ON CONFLICT (name, city) DO UPDATE
+        SET updated_at = NOW()
       RETURNING *
     `,
     [name, city, latitude, longitude]

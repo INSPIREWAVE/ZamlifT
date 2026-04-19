@@ -28,36 +28,44 @@ function registerSocket(io) {
 
   io.on('connection', (socket) => {
     socket.on('trip:join', async ({ tripId }) => {
-      if (!tripId) return;
-      const allowed = socket.user.role === 'admin' || (await ensureTripParticipant(socket.user.id, tripId));
-      if (!allowed) {
-        socket.emit('trip:error', { message: 'Forbidden' });
-        return;
-      }
+      try {
+        if (!tripId) return;
+        const allowed = socket.user.role === 'admin' || (await ensureTripParticipant(socket.user.id, tripId));
+        if (!allowed) {
+          socket.emit('trip:error', { message: 'Forbidden' });
+          return;
+        }
 
-      socket.join(`trip:${tripId}`);
-      socket.emit('trip:joined', { tripId });
+        socket.join(`trip:${tripId}`);
+        socket.emit('trip:joined', { tripId });
+      } catch (err) {
+        socket.emit('trip:error', { message: 'Internal error joining trip' });
+      }
     });
 
     socket.on('trip:message', async ({ tripId, message }) => {
-      if (!tripId || !message || typeof message !== 'string' || !message.trim()) return;
+      try {
+        if (!tripId || !message || typeof message !== 'string' || !message.trim()) return;
 
-      const allowed = socket.user.role === 'admin' || (await ensureTripParticipant(socket.user.id, tripId));
-      if (!allowed) {
-        socket.emit('trip:error', { message: 'Forbidden' });
-        return;
+        const allowed = socket.user.role === 'admin' || (await ensureTripParticipant(socket.user.id, tripId));
+        if (!allowed) {
+          socket.emit('trip:error', { message: 'Forbidden' });
+          return;
+        }
+
+        const saved = await saveTripMessage({
+          tripId,
+          senderId: socket.user.id,
+          message: message.trim(),
+        });
+
+        io.to(`trip:${tripId}`).emit('trip:new-message', {
+          ...saved,
+          sender_name: socket.user.full_name,
+        });
+      } catch (err) {
+        socket.emit('trip:error', { message: 'Internal error sending message' });
       }
-
-      const saved = await saveTripMessage({
-        tripId,
-        senderId: socket.user.id,
-        message: message.trim(),
-      });
-
-      io.to(`trip:${tripId}`).emit('trip:new-message', {
-        ...saved,
-        sender_name: socket.user.full_name,
-      });
     });
   });
 }

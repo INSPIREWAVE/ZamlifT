@@ -16,7 +16,11 @@ async function upsertProfile(req, res, next) {
       phone,
     });
 
-    return res.status(201).json(profile);
+    // xmax === '0' means a fresh INSERT; any other value means an UPDATE
+    const wasInserted = profile.xmax === '0';
+    const { xmax: _xmax, ...profileData } = profile;
+
+    return res.status(wasInserted ? 201 : 200).json(profileData);
   } catch (error) {
     return next(error);
   }

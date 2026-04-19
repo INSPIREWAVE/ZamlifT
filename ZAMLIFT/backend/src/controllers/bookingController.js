@@ -11,6 +11,10 @@ async function createBookingHandler(req, res, next) {
       return res.status(404).json({ message: 'Trip not found' });
     }
 
+    if (!['scheduled', 'ongoing'].includes(trip.status)) {
+      return res.status(400).json({ message: 'Trip is not available for booking' });
+    }
+
     if (trip.seats_available < seatsBooked) {
       return res.status(400).json({ message: 'Not enough seats available' });
     }
@@ -64,7 +68,7 @@ async function updateBookingStatusHandler(req, res, next) {
     const trip = await getTripById(booking.trip_id);
     if (
       req.user.role !== 'admin' &&
-      trip.driver_id !== req.user.id &&
+      (trip === null || trip.driver_id !== req.user.id) &&
       booking.passenger_id !== req.user.id
     ) {
       return res.status(403).json({ message: 'Forbidden' });

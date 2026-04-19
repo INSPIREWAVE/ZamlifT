@@ -6,8 +6,13 @@ async function createDriverProfile({ userId, licenseNumber, nationalId, phone })
       INSERT INTO driver_profiles (user_id, license_number, national_id, phone, verification_status)
       VALUES ($1, $2, $3, $4, 'pending')
       ON CONFLICT (user_id)
-      DO UPDATE SET license_number = EXCLUDED.license_number, national_id = EXCLUDED.national_id, phone = EXCLUDED.phone
-      RETURNING *
+      DO UPDATE SET
+        license_number = EXCLUDED.license_number,
+        national_id = EXCLUDED.national_id,
+        phone = EXCLUDED.phone,
+        verification_status = 'pending',
+        updated_at = NOW()
+      RETURNING *, xmax::text
     `,
     [userId, licenseNumber, nationalId, phone]
   );

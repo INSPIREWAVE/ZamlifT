@@ -1,5 +1,6 @@
 const { getTripById } = require('../models/tripModel');
 const { createRating, getDriverRatings } = require('../models/ratingModel');
+const { query } = require('../config/db');
 
 async function createRatingHandler(req, res, next) {
   try {
@@ -8,6 +9,20 @@ async function createRatingHandler(req, res, next) {
     const trip = await getTripById(tripId);
     if (!trip) {
       return res.status(404).json({ message: 'Trip not found' });
+    }
+
+    if (trip.status !== 'completed') {
+      return res.status(400).json({ message: 'Trip must be completed before rating' });
+    }
+
+    const bookingCheck = await query(
+      `SELECT id FROM bookings
+       WHERE trip_id = $1 AND passenger_id = $2 AND status = 'completed'
+       LIMIT 1`,
+      [tripId, req.user.id]
+    );
+    if (bookingCheck.rowCount === 0) {
+      return res.status(403).json({ message: 'Only passengers with a completed booking may rate this trip' });
     }
 
     const created = await createRating({

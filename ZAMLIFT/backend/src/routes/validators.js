@@ -8,7 +8,7 @@ const authRegisterSchema = z.object({
     fullName: z.string().min(2).max(100),
     email: z.string().email(),
     password: z.string().min(8).max(72),
-    role: z.enum(['passenger', 'driver', 'admin']).default('passenger'),
+    role: z.enum(['passenger', 'driver']).default('passenger'),
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional(),
