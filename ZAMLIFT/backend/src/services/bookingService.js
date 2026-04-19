@@ -92,7 +92,7 @@ async function createBookingWithSeatReservation({
     );
 
     if (seatReservationRes.rowCount === 0) {
-      throw httpError(409, 'Unable to reserve seats due to invalid trip seat state');
+      throw httpError(409, 'Unable to reserve seats: insufficient availability or concurrent booking conflict');
     }
 
     await client.query(

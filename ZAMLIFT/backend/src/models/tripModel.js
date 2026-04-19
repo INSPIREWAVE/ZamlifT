@@ -13,8 +13,16 @@ async function createTrip({ driverId, vehicleId, routeId, departureTime, seatsTo
   );
 
   if (result.rowCount === 0) {
-    const error = new Error('Invalid vehicle or seats exceed vehicle capacity');
-    error.status = 400;
+    const vehicleRes = await query(
+      'SELECT seat_capacity FROM vehicles WHERE id = $1 LIMIT 1',
+      [vehicleId]
+    );
+    const error = new Error(
+      vehicleRes.rowCount === 0
+        ? 'Vehicle not found'
+        : 'Trip seats cannot exceed vehicle seat capacity'
+    );
+    error.status = vehicleRes.rowCount === 0 ? 404 : 400;
     throw error;
   }
 
