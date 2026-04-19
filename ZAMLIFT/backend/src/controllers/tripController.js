@@ -18,10 +18,11 @@ async function createTripHandler(req, res, next) {
     if (!profile || profile.verification_status !== 'approved') {
       return res.status(403).json({ message: 'Driver is not verified' });
     }
+    const driverProfileId = profile.id;
 
     const { vehicleId, routeId } = req.validated.body;
     const [vehicleOwned, routeFound] = await Promise.all([
-      vehicleBelongsToDriver(vehicleId, req.user.id),
+      vehicleBelongsToDriver(vehicleId, driverProfileId),
       routeExists(routeId),
     ]);
 
@@ -34,7 +35,7 @@ async function createTripHandler(req, res, next) {
     }
 
     const trip = await createTrip({
-      driverId: req.user.id,
+      driverId: driverProfileId,
       ...req.validated.body,
       status: 'scheduled',
     });
@@ -78,8 +79,14 @@ async function updateTripStatusHandler(req, res, next) {
       return res.status(404).json({ message: 'Trip not found' });
     }
 
-    if (req.user.role !== 'admin' && trip.driver_id !== req.user.id) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (req.user.role !== 'admin') {
+      const profile = await getDriverProfile(req.user.id);
+      if (!profile) {
+        return res.status(403).json({ message: 'Driver profile is required to modify this trip' });
+      }
+      if (trip.driver_id !== profile.id) {
+        return res.status(403).json({ message: 'You do not have permission to modify this trip' });
+      }
     }
 
     const updated = await updateTripStatus(tripId, status);
