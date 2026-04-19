@@ -81,15 +81,19 @@ async function createBookingWithSeatReservation({
       [tripId, passengerId, pickupStopId, dropoffStopId, seatsBooked, totalPrice]
     );
 
-    await client.query(
+    const seatReservationRes = await client.query(
       `
         UPDATE trips
         SET available_seats = available_seats - $2, updated_at = NOW()
-        WHERE id = $1
+        WHERE id = $1 AND available_seats >= $2
         RETURNING id
       `,
       [tripId, seatsBooked]
     );
+
+    if (seatReservationRes.rowCount === 0) {
+      throw httpError(409, 'Unable to reserve seats due to invalid trip seat state');
+    }
 
     await client.query(
       `
@@ -148,10 +152,13 @@ async function updateBookingStatusWithSeatAdjustment({
     if (status === BOOKING_STATUS_CANCELLED && booking.status !== BOOKING_STATUS_CANCELLED) {
       const seatUpdateRes = await client.query(
         `
-          UPDATE trips
-          SET available_seats = available_seats + $2, updated_at = NOW()
-          WHERE id = $1
-          RETURNING id
+          UPDATE trips t
+          SET available_seats = t.available_seats + $2, updated_at = NOW()
+          FROM vehicles v
+          WHERE t.id = $1
+            AND t.vehicle_id = v.id
+            AND t.available_seats + $2 <= v.seat_capacity
+          RETURNING t.id
         `,
         [booking.trip_id, booking.seats_booked]
       );

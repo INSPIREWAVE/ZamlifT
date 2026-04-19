@@ -1,13 +1,13 @@
 const { query } = require('../config/db');
 
-async function createTrip({ driverId, vehicleId, routeId, departureTime, seatsTotal, pricePerSeat, status }) {
+async function createTrip({ driverId, vehicleId, routeId, departureTime, seatsTotal: availableSeats, pricePerSeat: price, status }) {
   const result = await query(
     `
       INSERT INTO trips (driver_id, vehicle_id, route_id, departure_time, available_seats, price, status)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `,
-    [driverId, vehicleId, routeId, departureTime, seatsTotal, pricePerSeat, status]
+    [driverId, vehicleId, routeId, departureTime, availableSeats, price, status]
   );
 
   return result.rows[0];
@@ -84,10 +84,14 @@ async function routeExists(routeId) {
 async function adjustTripSeats(tripId, seatDelta) {
   const result = await query(
     `
-      UPDATE trips
-      SET available_seats = available_seats + $2, updated_at = NOW()
-      WHERE id = $1 AND available_seats + $2 >= 0
-      RETURNING *
+      UPDATE trips t
+      SET available_seats = t.available_seats + $2, updated_at = NOW()
+      FROM vehicles v
+      WHERE t.id = $1
+        AND t.vehicle_id = v.id
+        AND t.available_seats + $2 >= 0
+        AND t.available_seats + $2 <= v.seat_capacity
+      RETURNING t.*
     `,
     [tripId, seatDelta]
   );
