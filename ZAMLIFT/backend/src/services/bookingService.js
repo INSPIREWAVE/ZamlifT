@@ -41,25 +41,36 @@ async function createBookingWithSeatReservation({
       throw httpError(400, 'Driver cannot book own trip');
     }
 
-    const routeStopsRes = await client.query(
+    const pickupStopRes = await client.query(
       `
-        SELECT pick.sequence_order AS pickup_order, dropoff.sequence_order AS dropoff_order
-        FROM route_stops pick
-        JOIN route_stops dropoff ON dropoff.route_id = pick.route_id
-        WHERE pick.route_id = $1
-          AND pick.stop_id = $2
-          AND dropoff.stop_id = $3
+        SELECT sequence_order
+        FROM route_stops
+        WHERE route_id = $1
+          AND stop_id = $2
         LIMIT 1
       `,
-      [trip.route_id, pickupStopId, dropoffStopId]
+      [trip.route_id, pickupStopId]
     );
 
-    const routeStops = routeStopsRes.rows[0];
-    if (!routeStops) {
+    const dropoffStopRes = await client.query(
+      `
+        SELECT sequence_order
+        FROM route_stops
+        WHERE route_id = $1
+          AND stop_id = $2
+        LIMIT 1
+      `,
+      [trip.route_id, dropoffStopId]
+    );
+
+    const pickupStop = pickupStopRes.rows[0];
+    const dropoffStop = dropoffStopRes.rows[0];
+
+    if (!pickupStop || !dropoffStop) {
       throw httpError(400, 'Pickup and dropoff stops must belong to the trip route');
     }
 
-    if (routeStops.pickup_order >= routeStops.dropoff_order) {
+    if (pickupStop.sequence_order >= dropoffStop.sequence_order) {
       throw httpError(400, 'Pickup stop must come before dropoff stop on the route');
     }
 
