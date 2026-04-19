@@ -133,7 +133,14 @@ async function updateTripStatus(tripId, status) {
 
 async function vehicleBelongsToDriver(vehicleId, driverId) {
   const result = await query(
-    'SELECT id FROM vehicles WHERE id = $1 AND driver_id = $2 LIMIT 1',
+    `
+      SELECT v.id
+      FROM vehicles v
+      JOIN driver_profiles dp ON dp.user_id = v.driver_id
+      WHERE v.id = $1
+        AND dp.id = $2
+      LIMIT 1
+    `,
     [vehicleId, driverId]
   );
 
