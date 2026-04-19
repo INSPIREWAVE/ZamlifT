@@ -19,7 +19,7 @@ async function findTrips({ fromStopId, toStopId, departureDate }) {
       SELECT DISTINCT t.*, r.name AS route_name, r.origin_city, r.destination_city, u.full_name AS driver_name
       FROM trips t
       JOIN routes r ON r.id = t.route_id
-      JOIN driver_profiles dp ON COALESCE((to_jsonb(dp) ->> 'id')::uuid, dp.user_id) = t.driver_id
+      JOIN driver_profiles dp ON dp.id = t.driver_id
       JOIN users u ON u.id = dp.user_id
       JOIN route_stops rs_from ON rs_from.route_id = r.id
       JOIN route_stops rs_to ON rs_to.route_id = r.id
@@ -43,7 +43,7 @@ async function getTripById(tripId) {
       SELECT t.*, r.name AS route_name, r.origin_city, r.destination_city, u.full_name AS driver_name
       FROM trips t
       JOIN routes r ON r.id = t.route_id
-      JOIN driver_profiles dp ON COALESCE((to_jsonb(dp) ->> 'id')::uuid, dp.user_id) = t.driver_id
+      JOIN driver_profiles dp ON dp.id = t.driver_id
       JOIN users u ON u.id = dp.user_id
       WHERE t.id = $1
       LIMIT 1
@@ -65,14 +65,7 @@ async function updateTripStatus(tripId, status) {
 
 async function vehicleBelongsToDriver(vehicleId, driverId) {
   const result = await query(
-    `
-      SELECT v.id
-      FROM vehicles v
-      JOIN driver_profiles dp ON COALESCE((to_jsonb(dp) ->> 'id')::uuid, dp.user_id) = v.driver_id
-      WHERE v.id = $1
-        AND COALESCE((to_jsonb(dp) ->> 'id')::uuid, dp.user_id) = $2
-      LIMIT 1
-    `,
+    'SELECT id FROM vehicles WHERE id = $1 AND driver_id = $2 LIMIT 1',
     [vehicleId, driverId]
   );
 
