@@ -1,6 +1,5 @@
 function notFound(req, res, next) {
   res.status(404).json({ message: `Route not found: ${req.originalUrl}` });
-  next();
 }
 
 function errorHandler(err, req, res, next) {
@@ -14,7 +13,6 @@ function errorHandler(err, req, res, next) {
   }
 
   res.status(status).json(payload);
-  next();
 }
 
 module.exports = { notFound, errorHandler };
