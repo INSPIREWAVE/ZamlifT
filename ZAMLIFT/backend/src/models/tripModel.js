@@ -101,6 +101,7 @@ async function updateTripStatus(tripId, status) {
           total_revenue = EXCLUDED.total_revenue,
           calculated_at = NOW(),
           updated_at = NOW()
+        WHERE earnings.total_revenue IS DISTINCT FROM EXCLUDED.total_revenue
       `,
       [tripId, trip.driver_id, totalRevenue]
     );

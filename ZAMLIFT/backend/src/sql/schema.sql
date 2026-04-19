@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS earnings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   trip_id UUID NOT NULL UNIQUE REFERENCES trips(id) ON DELETE CASCADE,
   driver_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  total_revenue NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (total_revenue >= 0),
+  total_revenue NUMERIC(12,2) NOT NULL CHECK (total_revenue >= 0),
   calculated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
