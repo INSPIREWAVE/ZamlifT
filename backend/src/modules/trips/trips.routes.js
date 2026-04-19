@@ -88,8 +88,7 @@ router.get('/search', async (req, res, next) => {
 router.patch('/:id/status', authenticate, authorize('driver', 'admin'), validate(statusSchema), async (req, res, next) => {
   try {
     const nextStatus = req.body.status;
-    const result = await db.query(
-      `UPDATE trips SET status = $2, updated_at = NOW()
+    const updateTripStatusQuery = `UPDATE trips SET status = $2, updated_at = NOW()
        WHERE id = $1
          AND ($3 = 'admin' OR driver_id = $4)
          AND (
@@ -97,9 +96,8 @@ router.patch('/:id/status', authenticate, authorize('driver', 'admin'), validate
            OR (status = 'boarding' AND $2 IN ('on_trip', 'cancelled'))
            OR (status = 'on_trip' AND $2 = 'completed')
          )
-       RETURNING *`,
-      [req.params.id, nextStatus, req.user.role, req.user.id],
-    );
+       RETURNING *`;
+    let result = await db.query(updateTripStatusQuery, [req.params.id, nextStatus, req.user.role, req.user.id]);
 
     if (!result.rowCount) {
       const currentTrip = await db.query('SELECT status, driver_id FROM trips WHERE id = $1', [req.params.id]);
@@ -115,7 +113,8 @@ router.patch('/:id/status', authenticate, authorize('driver', 'admin'), validate
         throw new HttpError(400, `Invalid trip status transition: ${currentStatus} -> ${nextStatus}`);
       }
 
-      throw new HttpError(409, 'Trip status update conflict, please retry');
+      result = await db.query(updateTripStatusQuery, [req.params.id, nextStatus, req.user.role, req.user.id]);
+      if (!result.rowCount) throw new HttpError(409, 'Trip status update conflict, please retry');
     }
 
     req.app.get('io').to(`trip:${req.params.id}`).emit('trip:status_updated', result.rows[0]);

@@ -65,16 +65,14 @@ router.get('/me', authenticate, authorize('passenger'), async (req, res, next) =
 router.patch('/:id/status', authenticate, authorize('driver', 'admin'), validate(statusSchema), async (req, res, next) => {
   try {
     const nextStatus = req.body.status;
-    const result = await db.query(
-      `UPDATE bookings SET status = $2, updated_at = NOW()
+    const updateBookingStatusQuery = `UPDATE bookings SET status = $2, updated_at = NOW()
        WHERE id = $1
          AND (
            (status = 'pending' AND $2 IN ('confirmed', 'cancelled'))
            OR (status = 'confirmed' AND $2 IN ('completed', 'cancelled'))
          )
-       RETURNING *`,
-      [req.params.id, nextStatus],
-    );
+       RETURNING *`;
+    let result = await db.query(updateBookingStatusQuery, [req.params.id, nextStatus]);
 
     if (!result.rowCount) {
       const currentBooking = await db.query('SELECT status FROM bookings WHERE id = $1', [req.params.id]);
@@ -86,7 +84,8 @@ router.patch('/:id/status', authenticate, authorize('driver', 'admin'), validate
         throw new HttpError(400, `Invalid booking status transition: ${currentStatus} -> ${nextStatus}`);
       }
 
-      throw new HttpError(409, 'Booking status update conflict, please retry');
+      result = await db.query(updateBookingStatusQuery, [req.params.id, nextStatus]);
+      if (!result.rowCount) throw new HttpError(409, 'Booking status update conflict, please retry');
     }
 
     res.json(result.rows[0]);
