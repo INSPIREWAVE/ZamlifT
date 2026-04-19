@@ -3,8 +3,8 @@ const { query } = require('../config/db');
 async function createTrip({ driverId, vehicleId, routeId, departureTime, seatsTotal, pricePerSeat, status }) {
   const result = await query(
     `
-      INSERT INTO trips (driver_id, vehicle_id, route_id, departure_time, seats_total, seats_available, price_per_seat, status)
-      VALUES ($1, $2, $3, $4, $5, $5, $6, $7)
+      INSERT INTO trips (driver_id, vehicle_id, route_id, departure_time, available_seats, price, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `,
     [driverId, vehicleId, routeId, departureTime, seatsTotal, pricePerSeat, status]
@@ -28,7 +28,7 @@ async function findTrips({ fromStopId, toStopId, departureDate }) {
         AND rs_from.sequence_order < rs_to.sequence_order
         AND DATE(t.departure_time) = $3
         AND t.status IN ('scheduled','ongoing')
-        AND t.seats_available > 0
+        AND t.available_seats > 0
       ORDER BY t.departure_time ASC
     `,
     [fromStopId, toStopId, departureDate]
@@ -85,8 +85,8 @@ async function adjustTripSeats(tripId, seatDelta) {
   const result = await query(
     `
       UPDATE trips
-      SET seats_available = seats_available + $2, updated_at = NOW()
-      WHERE id = $1 AND seats_available + $2 >= 0 AND seats_available + $2 <= seats_total
+      SET available_seats = available_seats + $2, updated_at = NOW()
+      WHERE id = $1 AND available_seats + $2 >= 0
       RETURNING *
     `,
     [tripId, seatDelta]
