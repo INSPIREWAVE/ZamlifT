@@ -1,4 +1,4 @@
-const { query } = require('../config/db');
+const { pool, query } = require('../config/db');
 
 async function createTrip({ driverId, vehicleId, routeId, departureTime, seatsTotal, pricePerSeat, status }) {
   const result = await query(
@@ -55,12 +55,64 @@ async function getTripById(tripId) {
 }
 
 async function updateTripStatus(tripId, status) {
-  const result = await query(
-    'UPDATE trips SET status = $2, updated_at = NOW() WHERE id = $1 RETURNING *',
-    [tripId, status]
-  );
+  if (status !== 'completed') {
+    const result = await query(
+      'UPDATE trips SET status = $2, updated_at = NOW() WHERE id = $1 RETURNING *',
+      [tripId, status]
+    );
 
-  return result.rows[0] || null;
+    return result.rows[0] || null;
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const tripResult = await client.query(
+      'UPDATE trips SET status = $2, updated_at = NOW() WHERE id = $1 RETURNING *',
+      [tripId, status]
+    );
+    const trip = tripResult.rows[0] || null;
+
+    if (!trip) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    const revenueResult = await client.query(
+      `
+        SELECT COALESCE(SUM(total_price), 0)::numeric(12,2) AS total_revenue
+        FROM bookings
+        WHERE trip_id = $1
+          AND payment_status = 'paid'
+          AND status <> 'cancelled'
+      `,
+      [tripId]
+    );
+    const totalRevenue = revenueResult.rows[0].total_revenue;
+
+    await client.query(
+      `
+        INSERT INTO earnings (trip_id, driver_id, total_revenue, calculated_at, updated_at)
+        VALUES ($1, $2, $3, NOW(), NOW())
+        ON CONFLICT (trip_id)
+        DO UPDATE SET
+          total_revenue = EXCLUDED.total_revenue,
+          calculated_at = NOW(),
+          updated_at = NOW()
+      `,
+      [tripId, trip.driver_id, totalRevenue]
+    );
+
+    await client.query('COMMIT');
+    return trip;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function vehicleBelongsToDriver(vehicleId, driverId) {
