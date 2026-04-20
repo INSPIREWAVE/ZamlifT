@@ -99,7 +99,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: Center(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              const maxWidth = 640.0;
+              const maxWidth = 520.0;
               return SingleChildScrollView(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 32),

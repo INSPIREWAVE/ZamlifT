@@ -129,7 +129,10 @@ class AuthService {
     final token = payload['token'];
     final userJson = payload['user'];
 
-    if (token is! String || token.isEmpty || userJson is! Map<String, dynamic>) {
+    if (token is! String ||
+        token.isEmpty ||
+        !_looksLikeJwt(token) ||
+        userJson is! Map<String, dynamic>) {
       throw const ApiException(
         statusCode: 500,
         message: 'Authentication response is missing required fields.',
@@ -140,4 +143,6 @@ class AuthService {
     await _storage.saveToken(token);
     return (user: user, token: token);
   }
+
+  bool _looksLikeJwt(String token) => token.split('.').length == 3;
 }
