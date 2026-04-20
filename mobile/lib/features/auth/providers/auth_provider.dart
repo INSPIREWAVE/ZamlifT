@@ -170,7 +170,7 @@ class AuthProvider extends ChangeNotifier {
     required String fallback,
   }) {
     final raw = error.toString().trim();
-    if (raw.isEmpty || raw == 'Exception') {
+    if (raw.isEmpty || raw == 'Exception' || raw.startsWith('Exception:')) {
       return fallback;
     }
     return raw;

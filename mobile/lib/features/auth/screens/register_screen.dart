@@ -35,18 +35,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     FocusScope.of(context).unfocus();
     final messenger = ScaffoldMessenger.of(context);
-    bool ok = false;
-    try {
-      ok = await context.read<AuthProvider>().register(
-            fullName: _nameCtrl.text.trim(),
-            email: _emailCtrl.text.trim(),
-            password: _passCtrl.text,
-            phone: _phoneCtrl.text.trim(),
-            role: _role,
-          );
-    } catch (_) {
-      ok = false;
-    }
+    final ok = await context.read<AuthProvider>().register(
+          fullName: _nameCtrl.text.trim(),
+          email: _emailCtrl.text.trim(),
+          password: _passCtrl.text,
+          phone: _phoneCtrl.text.trim(),
+          role: _role,
+        );
 
     if (!mounted) return;
     if (ok) {

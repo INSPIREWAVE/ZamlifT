@@ -29,15 +29,10 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
     final messenger = ScaffoldMessenger.of(context);
-    bool ok = false;
-    try {
-      ok = await context.read<AuthProvider>().login(
-            email: _emailCtrl.text.trim(),
-            password: _passCtrl.text,
-          );
-    } catch (_) {
-      ok = false;
-    }
+    final ok = await context.read<AuthProvider>().login(
+          email: _emailCtrl.text.trim(),
+          password: _passCtrl.text,
+        );
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).pushReplacementNamed('/home');
