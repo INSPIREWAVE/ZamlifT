@@ -388,12 +388,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ? null
                                 : () => Navigator.of(context)
                                     .pushReplacementNamed('/login'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: _primaryColor,
+                            ),
                             child: const Text(
                               'Sign In',
-                              style: TextStyle(
-                                color: _primaryColor,
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: TextStyle(fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],

@@ -287,12 +287,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ? null
                                 : () => Navigator.of(context)
                                     .pushReplacementNamed('/register'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: _primaryColor,
+                            ),
                             child: const Text(
                               'Register',
-                              style: TextStyle(
-                                color: _primaryColor,
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: TextStyle(fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],
