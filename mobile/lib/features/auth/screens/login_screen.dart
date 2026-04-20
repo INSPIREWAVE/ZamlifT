@@ -28,10 +28,16 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-    final ok = await context.read<AuthProvider>().login(
-          email: _emailCtrl.text.trim(),
-          password: _passCtrl.text,
-        );
+    final messenger = ScaffoldMessenger.of(context);
+    bool ok = false;
+    try {
+      ok = await context.read<AuthProvider>().login(
+            email: _emailCtrl.text.trim(),
+            password: _passCtrl.text,
+          );
+    } catch (_) {
+      ok = false;
+    }
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).pushReplacementNamed('/home');
@@ -39,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     final message = context.read<AuthProvider>().error ?? 'Login failed';
-    ScaffoldMessenger.of(context)
+    messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
   }
@@ -82,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
-    final isLoading = authProvider.status == AuthStatus.loading;
+    final isLoading = authProvider.isLoading;
     final error = authProvider.error;
 
     return Scaffold(
