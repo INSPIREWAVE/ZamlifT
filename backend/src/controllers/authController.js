@@ -11,30 +11,13 @@ function buildMissingFieldError(fieldName) {
 async function register(req, res, next) {
   try {
     console.log('[auth.register] incoming body:', req.body);
-    const body = req.validated?.body || req.body || {};
-    const {
-      fullName,
-      email,
-      password,
-      role = 'passenger',
-      phone,
-    } = body;
-
-    if (!fullName || !String(fullName).trim()) {
-      throw buildMissingFieldError('Full name');
+    const body = req.validated?.body;
+    if (!body) {
+      const validationError = buildMissingFieldError('Registration payload');
+      console.error('[auth.register] validation error:', validationError.message);
+      throw validationError;
     }
-    if (!email || !String(email).trim()) {
-      throw buildMissingFieldError('Email');
-    }
-    if (!password || !String(password).trim()) {
-      throw buildMissingFieldError('Password');
-    }
-    if (!role || !String(role).trim()) {
-      throw buildMissingFieldError('Role');
-    }
-    if (!phone || !String(phone).trim()) {
-      throw buildMissingFieldError('Phone');
-    }
+    const { fullName, email, password, role, phone } = body;
 
     const existing = await findUserByEmail(email);
     if (existing) {
