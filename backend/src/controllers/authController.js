@@ -2,21 +2,75 @@ const bcrypt = require('bcrypt');
 const { createUser, findUserByEmail } = require('../models/userModel');
 const { signToken } = require('../services/authService');
 
+function buildMissingFieldError(fieldName) {
+  const error = new Error(`${fieldName} is required`);
+  error.status = 400;
+  return error;
+}
+
 async function register(req, res, next) {
   try {
-    const { fullName, email, password, role } = req.validated.body;
+    console.log('[auth.register] incoming body:', req.body);
+    const body = req.validated?.body || req.body || {};
+    const {
+      fullName,
+      email,
+      password,
+      role = 'passenger',
+      phone,
+    } = body;
+
+    if (!fullName || !String(fullName).trim()) {
+      throw buildMissingFieldError('Full name');
+    }
+    if (!email || !String(email).trim()) {
+      throw buildMissingFieldError('Email');
+    }
+    if (!password || !String(password).trim()) {
+      throw buildMissingFieldError('Password');
+    }
+    if (!role || !String(role).trim()) {
+      throw buildMissingFieldError('Role');
+    }
+    if (!phone || !String(phone).trim()) {
+      throw buildMissingFieldError('Phone');
+    }
 
     const existing = await findUserByEmail(email);
     if (existing) {
-      return res.status(409).json({ message: 'Email already registered' });
+      return res.status(409).json({ message: 'Email already exists' });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const user = await createUser({ fullName, email, passwordHash, role });
+    const user = await createUser({
+      fullName: String(fullName).trim(),
+      email: String(email).trim(),
+      passwordHash,
+      role: String(role).trim(),
+      phone: String(phone).trim(),
+    });
     const token = signToken(user);
 
     return res.status(201).json({ user, token });
   } catch (error) {
+    if (error?.status === 400) {
+      console.error('[auth.register] validation error:', error.message);
+      return res.status(400).json({ message: error.message });
+    }
+
+    if (error?.code || error?.detail) {
+      console.error('[auth.register] database error:', {
+        code: error.code,
+        detail: error.detail,
+        constraint: error.constraint,
+        message: error.message,
+      });
+    }
+
+    if (error?.message) {
+      return res.status(400).json({ message: error.message });
+    }
+
     return next(error);
   }
 }

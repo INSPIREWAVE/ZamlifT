@@ -34,13 +34,36 @@ class ApiClient {
 
   dynamic _parse(http.Response response) {
     final body = response.body.isEmpty ? '{}' : response.body;
-    final decoded = jsonDecode(body);
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(body);
+    } on FormatException {
+      decoded = {'message': body};
+    }
+
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return decoded;
     }
-    final message = (decoded is Map && decoded['message'] is String)
-        ? decoded['message'] as String
-        : 'Request failed (${response.statusCode})';
+
+    String? message;
+    if (decoded is Map) {
+      final rawMessage = decoded['message'];
+      if (rawMessage is String && rawMessage.trim().isNotEmpty) {
+        message = rawMessage.trim();
+      } else if (decoded['error'] is String &&
+          (decoded['error'] as String).trim().isNotEmpty) {
+        message = (decoded['error'] as String).trim();
+      } else if (decoded['errors'] is List && (decoded['errors'] as List).isNotEmpty) {
+        final first = (decoded['errors'] as List).first;
+        if (first is Map && first['message'] is String) {
+          message = (first['message'] as String).trim();
+        } else if (first is String && first.trim().isNotEmpty) {
+          message = first.trim();
+        }
+      }
+    }
+
+    message ??= 'Request failed (${response.statusCode})';
     throw ApiException(statusCode: response.statusCode, message: message);
   }
 

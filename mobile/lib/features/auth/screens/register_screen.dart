@@ -35,7 +35,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     FocusScope.of(context).unfocus();
     final messenger = ScaffoldMessenger.of(context);
-    final ok = await context.read<AuthProvider>().register(
+    final authProvider = context.read<AuthProvider>();
+    authProvider.clearError();
+    final ok = await authProvider.register(
           fullName: _nameCtrl.text.trim(),
           email: _emailCtrl.text.trim(),
           password: _passCtrl.text,
@@ -49,7 +51,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    final message = context.read<AuthProvider>().error ?? 'Registration failed';
+    final message = authProvider.error ?? 'Unable to register right now.';
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));

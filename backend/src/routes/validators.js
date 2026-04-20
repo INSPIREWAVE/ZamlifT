@@ -5,10 +5,30 @@ const maxVehicleYear = new Date().getUTCFullYear() + 2;
 
 const authRegisterSchema = z.object({
   body: z.object({
-    fullName: z.string().min(2).max(100),
-    email: z.string().email(),
-    password: z.string().min(8).max(72),
-    role: z.enum(['passenger', 'driver']).default('passenger'),
+    fullName: z
+      .string({ required_error: 'Full name is required' })
+      .trim()
+      .min(1, 'Full name is required')
+      .max(100),
+    email: z
+      .string({ required_error: 'Email is required' })
+      .trim()
+      .min(1, 'Email is required')
+      .email('Email is invalid'),
+    password: z
+      .string({ required_error: 'Password is required' })
+      .min(1, 'Password is required')
+      .min(8, 'Password must be at least 8 characters')
+      .max(72),
+    role: z.enum(['passenger', 'driver'], {
+      required_error: 'Role is required',
+    }),
+    phone: z
+      .string({ required_error: 'Phone is required' })
+      .trim()
+      .min(1, 'Phone is required')
+      .min(7, 'Phone must be at least 7 characters')
+      .max(20, 'Phone must be at most 20 characters'),
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional(),
