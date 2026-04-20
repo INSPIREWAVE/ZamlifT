@@ -32,6 +32,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
     final ok = await context.read<AuthProvider>().register(
           fullName: _nameCtrl.text.trim(),
           email: _emailCtrl.text.trim(),
@@ -42,7 +43,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).pushReplacementNamed('/home');
+      return;
     }
+
+    final message = context.read<AuthProvider>().error ?? 'Registration failed';
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   InputDecoration _inputDecoration({
@@ -89,10 +96,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          child: Column(
-            children: [
+        child: Center(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              const maxWidth = 640.0;
+              return SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxWidth),
+                  child: Column(
+                    children: [
               // Header
               Row(
                 children: [
@@ -362,29 +376,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 24),
 
               // Login link
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Already have an account? ',
-                    style: TextStyle(color: Colors.grey.shade600),
-                  ),
-                  GestureDetector(
-                    onTap: isLoading
-                        ? null
-                        : () => Navigator.of(context)
-                            .pushReplacementNamed('/login'),
-                    child: const Text(
-                      'Sign In',
-                      style: TextStyle(
-                        color: _primaryColor,
-                        fontWeight: FontWeight.w600,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Already have an account? ',
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                          TextButton(
+                            onPressed: isLoading
+                                ? null
+                                : () => Navigator.of(context)
+                                    .pushReplacementNamed('/login'),
+                            child: const Text(
+                              'Sign In',
+                              style: TextStyle(
+                                color: _primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ],
+                ),
+              );
+            },
           ),
         ),
       ),

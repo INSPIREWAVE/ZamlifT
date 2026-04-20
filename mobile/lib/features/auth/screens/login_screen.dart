@@ -27,6 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
     final ok = await context.read<AuthProvider>().login(
           email: _emailCtrl.text.trim(),
           password: _passCtrl.text,
@@ -34,7 +35,13 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).pushReplacementNamed('/home');
+      return;
     }
+
+    final message = context.read<AuthProvider>().error ?? 'Login failed';
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   InputDecoration _inputDecoration({
@@ -82,11 +89,17 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.grey.shade100,
       body: SafeArea(
         child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              const maxWidth = 520.0;
+              return SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxWidth),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
                 // Logo and branding
                 Container(
                   padding: const EdgeInsets.all(20),
@@ -262,30 +275,33 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 24),
 
                 // Register link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Don't have an account? ",
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
-                    GestureDetector(
-                      onTap: isLoading
-                          ? null
-                          : () => Navigator.of(context)
-                              .pushReplacementNamed('/register'),
-                      child: const Text(
-                        'Register',
-                        style: TextStyle(
-                          color: _primaryColor,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Don't have an account? ",
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                          TextButton(
+                            onPressed: isLoading
+                                ? null
+                                : () => Navigator.of(context)
+                                    .pushReplacementNamed('/register'),
+                            child: const Text(
+                              'Register',
+                              style: TextStyle(
+                                color: _primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),
