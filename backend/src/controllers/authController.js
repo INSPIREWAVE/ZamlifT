@@ -11,7 +11,7 @@ function buildMissingFieldError(fieldName) {
 async function register(req, res, next) {
   try {
     const requestBody = req.body || {};
-    const { password, ...safeBody } = requestBody;
+    const { password: _password, ...safeBody } = requestBody;
     console.log('[auth.register] incoming body:', safeBody);
     const body = req.validated?.body;
     if (!body) {
