@@ -27,7 +27,7 @@ const limiter = rateLimit({
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.CLIENT_ORIGIN?.split(',') || ['http://localhost:5173'],
+    origin: true,
     credentials: true,
   })
 );

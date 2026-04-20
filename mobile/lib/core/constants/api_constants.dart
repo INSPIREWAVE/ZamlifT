@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// All backend API paths.
 ///
 /// Override [baseUrl] via [ApiConstants.configure] before starting the app
@@ -5,7 +7,19 @@
 class ApiConstants {
   ApiConstants._();
 
-  static String baseUrl = 'http://10.0.2.2:5000'; // Android emulator → host
+  static String baseUrl = _defaultBaseUrl();
+
+  static String _defaultBaseUrl() {
+    if (kIsWeb) {
+      return 'http://localhost:5000';
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:5000';
+    }
+
+    return 'http://localhost:5000';
+  }
 
   static void configure(String url) => baseUrl = url.replaceAll(RegExp(r'/$'), '');
 

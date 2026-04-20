@@ -4,6 +4,7 @@ const {
   findTrips,
   getTripById,
   updateTripStatus,
+  listTripsForAdmin,
   vehicleBelongsToDriver,
   routeExists,
 } = require('../models/tripModel');
@@ -15,14 +16,14 @@ async function createTripHandler(req, res, next) {
     }
 
     const profile = await getDriverProfile(req.user.id);
-    const driverProfileId = profile?.id;
-    if (!profile || !driverProfileId || profile.verification_status !== 'approved') {
+    const driverUserId = profile?.user_id;
+    if (!profile || !driverUserId || profile.verification_status !== 'approved') {
       return res.status(403).json({ message: 'Driver is not verified' });
     }
 
     const { vehicleId, routeId } = req.validated.body;
     const [vehicleOwned, routeFound] = await Promise.all([
-      vehicleBelongsToDriver(vehicleId, driverProfileId),
+      vehicleBelongsToDriver(vehicleId, driverUserId),
       routeExists(routeId),
     ]);
 
@@ -35,7 +36,7 @@ async function createTripHandler(req, res, next) {
     }
 
     const trip = await createTrip({
-      driverId: driverProfileId,
+      driverId: driverUserId,
       ...req.validated.body,
       status: 'scheduled',
     });
@@ -49,6 +50,15 @@ async function createTripHandler(req, res, next) {
 async function searchTripsHandler(req, res, next) {
   try {
     const trips = await findTrips(req.validated.query);
+    return res.json(trips);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function listTripsAdminHandler(req, res, next) {
+  try {
+    const trips = await listTripsForAdmin();
     return res.json(trips);
   } catch (error) {
     return next(error);
@@ -84,7 +94,7 @@ async function updateTripStatusHandler(req, res, next) {
       if (!profile) {
         return res.status(403).json({ message: 'Driver profile is required to modify this trip' });
       }
-      if (trip.driver_id !== profile.id) {
+      if (trip.driver_id !== profile.user_id) {
         return res.status(403).json({ message: 'You do not have permission to modify this trip' });
       }
     }
@@ -99,6 +109,7 @@ async function updateTripStatusHandler(req, res, next) {
 module.exports = {
   createTripHandler,
   searchTripsHandler,
+  listTripsAdminHandler,
   getTripHandler,
   updateTripStatusHandler,
 };

@@ -29,6 +29,21 @@ async function getUserBookings(userId) {
   return result.rows;
 }
 
+async function listAllBookings() {
+  const result = await query(
+    `
+      SELECT b.*, t.departure_time, t.status AS trip_status, r.name AS route_name, u.full_name AS passenger_name
+      FROM bookings b
+      JOIN trips t ON t.id = b.trip_id
+      JOIN routes r ON r.id = t.route_id
+      JOIN users u ON u.id = b.passenger_id
+      ORDER BY b.created_at DESC
+    `
+  );
+
+  return result.rows;
+}
+
 async function updateBookingStatus(bookingId, status) {
   const result = await query(
     'UPDATE bookings SET status = $2, updated_at = NOW() WHERE id = $1 RETURNING *',
@@ -50,6 +65,7 @@ async function getBookingById(bookingId) {
 module.exports = {
   createBooking,
   getUserBookings,
+  listAllBookings,
   updateBookingStatus,
   getBookingById,
 };

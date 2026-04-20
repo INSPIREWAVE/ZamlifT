@@ -2,6 +2,7 @@ const { z } = require('zod');
 
 const uuid = z.string().uuid();
 const maxVehicleYear = new Date().getUTCFullYear() + 2;
+const TRIP_STATUS_VALUES = ['scheduled', 'on_trip', 'completed', 'cancelled'];
 
 const authRegisterSchema = z.object({
   body: z.object({
@@ -133,7 +134,7 @@ const tripIdSchema = z.object({
 const updateTripStatusSchema = z.object({
   params: z.object({ tripId: uuid }),
   body: z.object({
-    status: z.enum(['scheduled', 'on_trip', 'completed', 'cancelled']),
+    status: z.enum(TRIP_STATUS_VALUES),
   }),
   query: z.object({}).optional(),
 });
