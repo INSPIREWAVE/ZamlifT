@@ -66,9 +66,11 @@ class AuthProvider extends ChangeNotifier {
       _status = AuthStatus.authenticated;
       return true;
     } on ApiException catch (e) {
+      _user = null;
       _setError(e.message);
       return false;
     } catch (_) {
+      _user = null;
       _setError('An unexpected error occurred. Please try again.');
       return false;
     } finally {
@@ -104,9 +106,11 @@ class AuthProvider extends ChangeNotifier {
       _status = AuthStatus.authenticated;
       return true;
     } on ApiException catch (e) {
+      _user = null;
       _setError(e.message);
       return false;
     } catch (_) {
+      _user = null;
       _setError('An unexpected error occurred. Please try again.');
       return false;
     } finally {
@@ -147,7 +151,6 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void _setError(String message) {
-    _user = null;
     _error = message;
     _status = AuthStatus.error;
   }
