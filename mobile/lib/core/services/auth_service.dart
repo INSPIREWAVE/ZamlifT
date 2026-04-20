@@ -128,11 +128,11 @@ class AuthService {
 
     final token = payload['token'];
     final userJson = payload['user'];
+    final isValidToken =
+        token is String && token.isNotEmpty && _hasThreeParts(token);
+    final isValidUser = userJson is Map<String, dynamic>;
 
-    if (token is! String ||
-        token.isEmpty ||
-        !_hasBasicJwtFormat(token) ||
-        userJson is! Map<String, dynamic>) {
+    if (!isValidToken || !isValidUser) {
       throw const ApiException(
         statusCode: 500,
         message: 'Authentication response is missing required fields.',
@@ -144,5 +144,5 @@ class AuthService {
     return (user: user, token: token);
   }
 
-  bool _hasBasicJwtFormat(String token) => token.split('.').length == 3;
+  bool _hasThreeParts(String token) => token.split('.').length == 3;
 }
