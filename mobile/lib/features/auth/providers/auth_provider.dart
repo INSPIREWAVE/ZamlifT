@@ -12,21 +12,21 @@ class AuthProvider extends ChangeNotifier {
   final AuthService _service;
 
   AuthStatus _status = AuthStatus.idle;
+  bool _isLoading = false;
   AppUser? _user;
   String? _error;
 
   AuthStatus get status => _status;
+  bool get isLoading => _isLoading;
   AppUser? get user => _user;
   String? get error => _error;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
-  bool get isLoading => _status == AuthStatus.loading;
   bool get hasError => _status == AuthStatus.error;
 
   /// Called on app start – restores the session from stored token.
   Future<void> tryRestoreSession() async {
-    _status = AuthStatus.loading;
-    _error = null;
-    notifyListeners();
+    if (_isLoading) return;
+    _beginLoading();
 
     try {
       final token = await _service.getToken();
@@ -46,8 +46,9 @@ class AuthProvider extends ChangeNotifier {
       _user = null;
       _error = 'Unable to restore your session.';
       _status = AuthStatus.error;
+    } finally {
+      _endLoading();
     }
-    notifyListeners();
   }
 
   /// Logs in with email + password.
@@ -56,9 +57,8 @@ class AuthProvider extends ChangeNotifier {
     required String email,
     required String password,
   }) async {
-    _clearError();
-    _status = AuthStatus.loading;
-    notifyListeners();
+    if (_isLoading) return false;
+    _beginLoading();
 
     try {
       final result = await _service.login(email: email, password: password);
@@ -69,15 +69,12 @@ class AuthProvider extends ChangeNotifier {
       _user = null;
       _setError(e.message);
       return false;
-    } catch (_) {
+    } catch (e) {
       _user = null;
-      _setError('An unexpected error occurred. Please try again.');
+      _setError(_readableErrorMessage(e, fallback: 'Unable to login right now.'));
       return false;
     } finally {
-      if (_status == AuthStatus.loading) {
-        _status = AuthStatus.idle;
-      }
-      notifyListeners();
+      _endLoading();
     }
   }
 
@@ -90,9 +87,8 @@ class AuthProvider extends ChangeNotifier {
     required String phone,
     String role = 'passenger',
   }) async {
-    _clearError();
-    _status = AuthStatus.loading;
-    notifyListeners();
+    if (_isLoading) return false;
+    _beginLoading();
 
     try {
       final result = await _service.register(
@@ -109,15 +105,14 @@ class AuthProvider extends ChangeNotifier {
       _user = null;
       _setError(e.message);
       return false;
-    } catch (_) {
+    } catch (e) {
       _user = null;
-      _setError('An unexpected error occurred. Please try again.');
+      _setError(
+        _readableErrorMessage(e, fallback: 'Unable to register right now.'),
+      );
       return false;
     } finally {
-      if (_status == AuthStatus.loading) {
-        _status = AuthStatus.idle;
-      }
-      notifyListeners();
+      _endLoading();
     }
   }
 
@@ -126,6 +121,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       await _service.logout();
     } finally {
+      _isLoading = false;
       _user = null;
       _error = null;
       _status = AuthStatus.idle;
@@ -150,8 +146,38 @@ class AuthProvider extends ChangeNotifier {
     _error = null;
   }
 
+  void _beginLoading() {
+    _isLoading = true;
+    _status = AuthStatus.loading;
+    _clearError();
+    notifyListeners();
+  }
+
+  void _endLoading() {
+    _isLoading = false;
+    if (_status == AuthStatus.loading) {
+      _status = AuthStatus.idle;
+    }
+    notifyListeners();
+  }
+
   void _setError(String message) {
     _error = message;
     _status = AuthStatus.error;
+  }
+
+  String _readableErrorMessage(
+    Object error, {
+    required String fallback,
+  }) {
+    if (error is ApiException) {
+      return error.message;
+    }
+    final raw = error.toString().trim();
+    if (raw.isEmpty || raw == 'Exception') {
+      return fallback;
+    }
+    final cleaned = raw.replaceFirst(RegExp(r'^Exception:\s*'), '').trim();
+    return cleaned.isEmpty ? fallback : cleaned;
   }
 }

@@ -34,6 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     FocusScope.of(context).unfocus();
+    final messenger = ScaffoldMessenger.of(context);
     final ok = await context.read<AuthProvider>().register(
           fullName: _nameCtrl.text.trim(),
           email: _emailCtrl.text.trim(),
@@ -49,7 +50,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     final message = context.read<AuthProvider>().error ?? 'Registration failed';
-    ScaffoldMessenger.of(context)
+    messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
   }
@@ -92,7 +93,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
-    final isLoading = authProvider.status == AuthStatus.loading;
+    final isLoading = authProvider.isLoading;
     final error = authProvider.error;
 
     return Scaffold(
