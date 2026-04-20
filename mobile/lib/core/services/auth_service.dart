@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import '../constants/api_constants.dart';
 import '../models/user.dart';
 import '../network/api_client.dart';
@@ -26,21 +29,43 @@ class AuthService {
     required String phone,
     String role = 'passenger',
   }) async {
-    final data = await _client.post(
-      ApiConstants.register,
-      {
-        'fullName': fullName,
-        'email': email,
-        'password': password,
-        'phone': phone,
-        'role': role,
-      },
-      auth: false,
-    ) as Map<String, dynamic>;
+    try {
+      final data = await _client.post(
+        ApiConstants.register,
+        {
+          'fullName': fullName,
+          'email': email,
+          'password': password,
+          'phone': phone,
+          'role': role,
+        },
+        auth: false,
+      );
 
-    final token = data['token'] as String;
-    await _storage.saveToken(token);
-    return (user: AppUser.fromJson(data['user'] as Map<String, dynamic>), token: token);
+      return _extractAndPersistAuthPayload(data);
+    } on ApiException {
+      rethrow;
+    } on TimeoutException {
+      throw const ApiException(
+        statusCode: 408,
+        message: 'Request timed out. Please try again.',
+      );
+    } on SocketException {
+      throw const ApiException(
+        statusCode: 503,
+        message: 'Unable to connect. Check your internet connection.',
+      );
+    } on FormatException {
+      throw const ApiException(
+        statusCode: 500,
+        message: 'Received an invalid server response.',
+      );
+    } catch (_) {
+      throw const ApiException(
+        statusCode: 500,
+        message: 'Unexpected error during registration.',
+      );
+    }
   }
 
   /// Logs in with email + password.
@@ -53,19 +78,71 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    final data = await _client.post(
-      ApiConstants.login,
-      {'email': email, 'password': password},
-      auth: false,
-    ) as Map<String, dynamic>;
+    try {
+      final data = await _client.post(
+        ApiConstants.login,
+        {'email': email, 'password': password},
+        auth: false,
+      );
 
-    final token = data['token'] as String;
-    await _storage.saveToken(token);
-    return (user: AppUser.fromJson(data['user'] as Map<String, dynamic>), token: token);
+      return _extractAndPersistAuthPayload(data);
+    } on ApiException {
+      rethrow;
+    } on TimeoutException {
+      throw const ApiException(
+        statusCode: 408,
+        message: 'Request timed out. Please try again.',
+      );
+    } on SocketException {
+      throw const ApiException(
+        statusCode: 503,
+        message: 'Unable to connect. Check your internet connection.',
+      );
+    } on FormatException {
+      throw const ApiException(
+        statusCode: 500,
+        message: 'Received an invalid server response.',
+      );
+    } catch (_) {
+      throw const ApiException(
+        statusCode: 500,
+        message: 'Unexpected error during login.',
+      );
+    }
   }
 
   Future<void> logout() => _storage.deleteToken();
 
   /// Returns the stored token, or null when not logged in.
   Future<String?> getToken() => _storage.getToken();
+
+  Future<({AppUser user, String token})> _extractAndPersistAuthPayload(
+    dynamic payload,
+  ) async {
+    if (payload is! Map<String, dynamic>) {
+      throw const ApiException(
+        statusCode: 500,
+        message: 'Received an invalid authentication response.',
+      );
+    }
+
+    final token = payload['token'];
+    final userJson = payload['user'];
+    final isValidToken =
+        token is String && token.isNotEmpty && _hasThreeParts(token);
+    final isValidUser = userJson is Map<String, dynamic>;
+
+    if (!isValidToken || !isValidUser) {
+      throw const ApiException(
+        statusCode: 500,
+        message: 'Authentication response is missing required fields.',
+      );
+    }
+
+    final user = AppUser.fromJson(userJson);
+    await _storage.saveToken(token);
+    return (user: user, token: token);
+  }
+
+  bool _hasThreeParts(String token) => token.split('.').length == 3;
 }

@@ -4,14 +4,14 @@ import '../../../core/models/user.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/services/auth_service.dart';
 
-enum AuthStatus { initial, loading, authenticated, unauthenticated, error }
+enum AuthStatus { idle, loading, authenticated, error }
 
 class AuthProvider extends ChangeNotifier {
   AuthProvider({required AuthService authService}) : _service = authService;
 
   final AuthService _service;
 
-  AuthStatus _status = AuthStatus.initial;
+  AuthStatus _status = AuthStatus.idle;
   AppUser? _user;
   String? _error;
 
@@ -25,19 +25,27 @@ class AuthProvider extends ChangeNotifier {
   /// Called on app start – restores the session from stored token.
   Future<void> tryRestoreSession() async {
     _status = AuthStatus.loading;
+    _error = null;
     notifyListeners();
 
     try {
       final token = await _service.getToken();
       if (token == null) {
-        _status = AuthStatus.unauthenticated;
+        _user = null;
+        _status = AuthStatus.idle;
       } else {
-        // Token exists; mark authenticated. The backend will reject expired
-        // tokens on the first API call, at which point screens call logout().
+        // Token exists; mark authenticated. The backend rejects expired tokens
+        // on protected endpoints, where screens can trigger logout.
         _status = AuthStatus.authenticated;
       }
-    } catch (e) {
-      _status = AuthStatus.unauthenticated;
+    } on ApiException catch (e) {
+      _user = null;
+      _error = e.message;
+      _status = AuthStatus.error;
+    } catch (_) {
+      _user = null;
+      _error = 'Unable to restore your session.';
+      _status = AuthStatus.error;
     }
     notifyListeners();
   }
@@ -56,14 +64,20 @@ class AuthProvider extends ChangeNotifier {
       final result = await _service.login(email: email, password: password);
       _user = result.user;
       _status = AuthStatus.authenticated;
-      notifyListeners();
       return true;
     } on ApiException catch (e) {
+      _user = null;
       _setError(e.message);
       return false;
-    } catch (e) {
+    } catch (_) {
+      _user = null;
       _setError('An unexpected error occurred. Please try again.');
       return false;
+    } finally {
+      if (_status == AuthStatus.loading) {
+        _status = AuthStatus.idle;
+      }
+      notifyListeners();
     }
   }
 
@@ -90,14 +104,20 @@ class AuthProvider extends ChangeNotifier {
       );
       _user = result.user;
       _status = AuthStatus.authenticated;
-      notifyListeners();
       return true;
     } on ApiException catch (e) {
+      _user = null;
       _setError(e.message);
       return false;
-    } catch (e) {
+    } catch (_) {
+      _user = null;
       _setError('An unexpected error occurred. Please try again.');
       return false;
+    } finally {
+      if (_status == AuthStatus.loading) {
+        _status = AuthStatus.idle;
+      }
+      notifyListeners();
     }
   }
 
@@ -108,7 +128,7 @@ class AuthProvider extends ChangeNotifier {
     } finally {
       _user = null;
       _error = null;
-      _status = AuthStatus.unauthenticated;
+      _status = AuthStatus.idle;
       notifyListeners();
     }
   }
@@ -118,7 +138,7 @@ class AuthProvider extends ChangeNotifier {
     if (_error != null) {
       _error = null;
       if (_status == AuthStatus.error) {
-        _status = AuthStatus.unauthenticated;
+        _status = AuthStatus.idle;
       }
       notifyListeners();
     }
@@ -133,6 +153,5 @@ class AuthProvider extends ChangeNotifier {
   void _setError(String message) {
     _error = message;
     _status = AuthStatus.error;
-    notifyListeners();
   }
 }

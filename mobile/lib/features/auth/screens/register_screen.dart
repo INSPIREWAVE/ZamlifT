@@ -32,6 +32,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    FocusScope.of(context).unfocus();
     final ok = await context.read<AuthProvider>().register(
           fullName: _nameCtrl.text.trim(),
           email: _emailCtrl.text.trim(),
@@ -39,10 +41,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
           phone: _phoneCtrl.text.trim(),
           role: _role,
         );
+
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).pushReplacementNamed('/home');
+      return;
     }
+
+    final message = context.read<AuthProvider>().error ?? 'Registration failed';
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   InputDecoration _inputDecoration({
@@ -89,302 +98,307 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          child: Column(
-            children: [
-              // Header
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: isLoading
-                        ? null
-                        : () => Navigator.of(context)
-                            .pushReplacementNamed('/login'),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(Icons.arrow_back, color: _primaryColor),
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: _primaryColor.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.person_add_outlined,
-                      size: 28,
-                      color: _primaryColor,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // Title
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Create Account',
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey.shade800,
+        child: Center(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              const maxWidth = 520.0;
+              return SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: maxWidth),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: isLoading
+                                ? null
+                                : () => Navigator.of(context)
+                                    .pushReplacementNamed('/login'),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Join ZamLift and start your journey',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey.shade600,
+                              child:
+                                  const Icon(Icons.arrow_back, color: _primaryColor),
+                            ),
                           ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Register Card
-              Card(
-                elevation: 8,
-                shadowColor: Colors.black26,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Error message
-                        if (error != null) ...[
+                          const Spacer(),
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.red.shade50,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.red.shade200),
+                              color: _primaryColor.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
                             ),
-                            child: Row(
+                            child: const Icon(
+                              Icons.person_add_outlined,
+                              size: 28,
+                              color: _primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Create Account',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey.shade800,
+                                  ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Join ZamLift and start your journey',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.grey.shade600,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Card(
+                        elevation: 8,
+                        shadowColor: Colors.black26,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Icon(Icons.error_outline,
-                                    color: Colors.red.shade700, size: 20),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    error,
-                                    style: TextStyle(
-                                      color: Colors.red.shade700,
-                                      fontSize: 14,
+                                if (error != null) ...[
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade50,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border:
+                                          Border.all(color: Colors.red.shade200),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.error_outline,
+                                          color: Colors.red.shade700,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            error,
+                                            style: TextStyle(
+                                              color: Colors.red.shade700,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                        GestureDetector(
+                                          onTap: () => context
+                                              .read<AuthProvider>()
+                                              .clearError(),
+                                          child: Icon(
+                                            Icons.close,
+                                            color: Colors.red.shade700,
+                                            size: 18,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
+                                  const SizedBox(height: 16),
+                                ],
+                                TextFormField(
+                                  controller: _nameCtrl,
+                                  textCapitalization: TextCapitalization.words,
+                                  textInputAction: TextInputAction.next,
+                                  enabled: !isLoading,
+                                  decoration: _inputDecoration(
+                                    label: 'Full Name',
+                                    prefixIcon: Icons.person_outline,
+                                  ),
+                                  validator: (v) => v != null && v.trim().length >= 2
+                                      ? null
+                                      : 'Enter your full name',
                                 ),
-                                GestureDetector(
-                                  onTap: () =>
-                                      context.read<AuthProvider>().clearError(),
-                                  child: Icon(Icons.close,
-                                      color: Colors.red.shade700, size: 18),
+                                const SizedBox(height: 16),
+                                TextFormField(
+                                  controller: _emailCtrl,
+                                  keyboardType: TextInputType.emailAddress,
+                                  textInputAction: TextInputAction.next,
+                                  enabled: !isLoading,
+                                  decoration: _inputDecoration(
+                                    label: 'Email Address',
+                                    prefixIcon: Icons.email_outlined,
+                                  ),
+                                  validator: (v) => v != null && v.contains('@')
+                                      ? null
+                                      : 'Enter a valid email',
+                                ),
+                                const SizedBox(height: 16),
+                                TextFormField(
+                                  controller: _phoneCtrl,
+                                  keyboardType: TextInputType.phone,
+                                  textInputAction: TextInputAction.next,
+                                  enabled: !isLoading,
+                                  decoration: _inputDecoration(
+                                    label: 'Phone Number',
+                                    prefixIcon: Icons.phone_outlined,
+                                  ),
+                                  validator: (v) => v != null && v.trim().length >= 9
+                                      ? null
+                                      : 'Enter a valid phone number',
+                                ),
+                                const SizedBox(height: 16),
+                                TextFormField(
+                                  controller: _passCtrl,
+                                  obscureText: _obscure,
+                                  textInputAction: TextInputAction.done,
+                                  enabled: !isLoading,
+                                  onFieldSubmitted: (_) => _submit(),
+                                  decoration: _inputDecoration(
+                                    label: 'Password',
+                                    prefixIcon: Icons.lock_outline,
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        _obscure
+                                            ? Icons.visibility_outlined
+                                            : Icons.visibility_off_outlined,
+                                        color: Colors.grey,
+                                      ),
+                                      onPressed: () =>
+                                          setState(() => _obscure = !_obscure),
+                                    ),
+                                  ),
+                                  validator: (v) => v != null && v.length >= 8
+                                      ? null
+                                      : 'Min 8 characters',
+                                ),
+                                const SizedBox(height: 20),
+                                Text(
+                                  'I am a:',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade700,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _RoleCard(
+                                        title: 'Passenger',
+                                        icon: Icons.person,
+                                        isSelected: _role == 'passenger',
+                                        isEnabled: !isLoading,
+                                        onTap: () =>
+                                            setState(() => _role = 'passenger'),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _RoleCard(
+                                        title: 'Driver',
+                                        icon: Icons.drive_eta,
+                                        isSelected: _role == 'driver',
+                                        isEnabled: !isLoading,
+                                        onTap: () => setState(() => _role = 'driver'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
+                                SizedBox(
+                                  height: 52,
+                                  child: ElevatedButton(
+                                    onPressed: isLoading ? null : _submit,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _primaryColor,
+                                      foregroundColor: Colors.white,
+                                      disabledBackgroundColor:
+                                          _primaryColor.withValues(alpha: 0.6),
+                                      elevation: isLoading ? 0 : 4,
+                                      shadowColor:
+                                          _primaryColor.withValues(alpha: 0.4),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: isLoading
+                                        ? const SizedBox(
+                                            height: 24,
+                                            width: 24,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.5,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                            ),
+                                          )
+                                        : const Text(
+                                            'Create Account',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 16),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Already have an account? ',
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                          TextButton(
+                            onPressed: isLoading
+                                ? null
+                                : () => Navigator.of(context)
+                                    .pushReplacementNamed('/login'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: _primaryColor,
+                            ),
+                            child: const Text(
+                              'Sign In',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
                         ],
-
-                        // Full Name field
-                        TextFormField(
-                          controller: _nameCtrl,
-                          textCapitalization: TextCapitalization.words,
-                          textInputAction: TextInputAction.next,
-                          enabled: !isLoading,
-                          decoration: _inputDecoration(
-                            label: 'Full Name',
-                            prefixIcon: Icons.person_outline,
-                          ),
-                          validator: (v) => v != null && v.trim().length >= 2
-                              ? null
-                              : 'Enter your full name',
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Email field
-                        TextFormField(
-                          controller: _emailCtrl,
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          enabled: !isLoading,
-                          decoration: _inputDecoration(
-                            label: 'Email Address',
-                            prefixIcon: Icons.email_outlined,
-                          ),
-                          validator: (v) => v != null && v.contains('@')
-                              ? null
-                              : 'Enter a valid email',
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Phone field
-                        TextFormField(
-                          controller: _phoneCtrl,
-                          keyboardType: TextInputType.phone,
-                          textInputAction: TextInputAction.next,
-                          enabled: !isLoading,
-                          decoration: _inputDecoration(
-                            label: 'Phone Number',
-                            prefixIcon: Icons.phone_outlined,
-                          ),
-                          validator: (v) => v != null && v.trim().length >= 9
-                              ? null
-                              : 'Enter a valid phone number',
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Password field
-                        TextFormField(
-                          controller: _passCtrl,
-                          obscureText: _obscure,
-                          textInputAction: TextInputAction.done,
-                          enabled: !isLoading,
-                          onFieldSubmitted: (_) => _submit(),
-                          decoration: _inputDecoration(
-                            label: 'Password',
-                            prefixIcon: Icons.lock_outline,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscure
-                                    ? Icons.visibility_outlined
-                                    : Icons.visibility_off_outlined,
-                                color: Colors.grey,
-                              ),
-                              onPressed: () =>
-                                  setState(() => _obscure = !_obscure),
-                            ),
-                          ),
-                          validator: (v) => v != null && v.length >= 8
-                              ? null
-                              : 'Min 8 characters',
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Role selection
-                        Text(
-                          'I am a:',
-                          style: TextStyle(
-                            color: Colors.grey.shade700,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _RoleCard(
-                                title: 'Passenger',
-                                icon: Icons.person,
-                                isSelected: _role == 'passenger',
-                                isEnabled: !isLoading,
-                                onTap: () =>
-                                    setState(() => _role = 'passenger'),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _RoleCard(
-                                title: 'Driver',
-                                icon: Icons.drive_eta,
-                                isSelected: _role == 'driver',
-                                isEnabled: !isLoading,
-                                onTap: () => setState(() => _role = 'driver'),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Register button
-                        SizedBox(
-                          height: 52,
-                          child: ElevatedButton(
-                            onPressed: isLoading ? null : _submit,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _primaryColor,
-                              foregroundColor: Colors.white,
-                              disabledBackgroundColor:
-                                  _primaryColor.withValues(alpha: 0.6),
-                              elevation: isLoading ? 0 : 4,
-                              shadowColor: _primaryColor.withValues(alpha: 0.4),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: isLoading
-                                ? const SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                          Colors.white),
-                                    ),
-                                  )
-                                : const Text(
-                                    'Create Account',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-
-              // Login link
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Already have an account? ',
-                    style: TextStyle(color: Colors.grey.shade600),
-                  ),
-                  GestureDetector(
-                    onTap: isLoading
-                        ? null
-                        : () => Navigator.of(context)
-                            .pushReplacementNamed('/login'),
-                    child: const Text(
-                      'Sign In',
-                      style: TextStyle(
-                        color: _primaryColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+              );
+            },
           ),
         ),
       ),
