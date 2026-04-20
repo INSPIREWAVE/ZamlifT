@@ -25,6 +25,7 @@ class AuthProvider extends ChangeNotifier {
 
   /// Called on app start – restores the session from stored token.
   Future<void> tryRestoreSession() async {
+    if (_isLoading) return;
     _beginLoading();
 
     try {
@@ -169,10 +170,14 @@ class AuthProvider extends ChangeNotifier {
     Object error, {
     required String fallback,
   }) {
+    if (error is ApiException) {
+      return error.message;
+    }
     final raw = error.toString().trim();
-    if (raw.isEmpty || raw == 'Exception' || raw.startsWith('Exception:')) {
+    if (raw.isEmpty || raw == 'Exception') {
       return fallback;
     }
-    return raw;
+    final cleaned = raw.replaceFirst(RegExp(r'^Exception:\s*'), '').trim();
+    return cleaned.isEmpty ? fallback : cleaned;
   }
 }
