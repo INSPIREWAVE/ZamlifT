@@ -55,9 +55,7 @@ class ApiClient {
         message = (decoded['error'] as String).trim();
       } else if (decoded['errors'] is List) {
         final errors = decoded['errors'] as List;
-        if (errors.isEmpty) {
-          message = null;
-        } else {
+        if (errors.isNotEmpty) {
           final first = errors.first;
           if (first is Map && first['message'] is String) {
             message = (first['message'] as String).trim();

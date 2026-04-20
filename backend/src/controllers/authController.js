@@ -26,11 +26,11 @@ async function register(req, res, next) {
 
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await createUser({
-      fullName: String(fullName).trim(),
-      email: String(email).trim(),
+      fullName,
+      email,
       passwordHash,
-      role: String(role).trim(),
-      phone: String(phone).trim(),
+      role,
+      phone,
     });
     const token = signToken(user);
 

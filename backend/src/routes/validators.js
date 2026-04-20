@@ -23,12 +23,14 @@ const authRegisterSchema = z.object({
     role: z.enum(['passenger', 'driver'], {
       required_error: 'Role is required',
     }),
-    phone: z
-      .string({ required_error: 'Phone is required' })
-      .trim()
-      .min(1, 'Phone is required')
-      .min(7, 'Phone must be at least 7 characters')
-      .max(20, 'Phone must be at most 20 characters'),
+    phone: z.preprocess(
+      (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+      z
+        .string({ required_error: 'Phone is required' })
+        .trim()
+        .min(7, 'Phone must be at least 7 characters')
+        .max(20, 'Phone must be at most 20 characters')
+    ),
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional(),
