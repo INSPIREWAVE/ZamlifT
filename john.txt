@@ -1,0 +1,11 @@
+✅ ALWAYS DO THIS:
+
+Before working locally:
+
+git pull origin main
+
+After making changes locally:
+
+git add .
+git commit -m "update"
+git push origin main

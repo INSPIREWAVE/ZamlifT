@@ -17,12 +17,13 @@ class AuthService {
   ///
   /// Request body:
   /// ```json
-  /// { "fullName": "...", "email": "...", "password": "...", "role": "passenger" }
+  /// { "fullName": "...", "email": "...", "password": "...", "phone": "...", "role": "passenger" }
   /// ```
   Future<({AppUser user, String token})> register({
     required String fullName,
     required String email,
     required String password,
+    required String phone,
     String role = 'passenger',
   }) async {
     final data = await _client.post(
@@ -31,6 +32,7 @@ class AuthService {
         'fullName': fullName,
         'email': email,
         'password': password,
+        'phone': phone,
         'role': role,
       },
       auth: false,
