@@ -32,6 +32,33 @@ class ApiClient {
     return headers;
   }
 
+  String? _extractErrorMessage(dynamic decoded) {
+    if (decoded is! Map) return null;
+
+    final rawMessage = decoded['message'];
+    if (rawMessage is String && rawMessage.trim().isNotEmpty) {
+      return rawMessage.trim();
+    }
+
+    final rawError = decoded['error'];
+    if (rawError is String && rawError.trim().isNotEmpty) {
+      return rawError.trim();
+    }
+
+    final rawErrors = decoded['errors'];
+    if (rawErrors is List && rawErrors.isNotEmpty) {
+      final first = rawErrors.first;
+      if (first is Map && first['message'] is String) {
+        return (first['message'] as String).trim();
+      }
+      if (first is String && first.trim().isNotEmpty) {
+        return first.trim();
+      }
+    }
+
+    return null;
+  }
+
   dynamic _parse(http.Response response) {
     final body = response.body.isEmpty ? '{}' : response.body;
     dynamic decoded;
@@ -45,26 +72,7 @@ class ApiClient {
       return decoded;
     }
 
-    String? message;
-    if (decoded is Map) {
-      final rawMessage = decoded['message'];
-      if (rawMessage is String && rawMessage.trim().isNotEmpty) {
-        message = rawMessage.trim();
-      } else if (decoded['error'] is String &&
-          (decoded['error'] as String).trim().isNotEmpty) {
-        message = (decoded['error'] as String).trim();
-      } else if (decoded['errors'] is List) {
-        final errors = decoded['errors'] as List;
-        if (errors.isNotEmpty) {
-          final first = errors.first;
-          if (first is Map && first['message'] is String) {
-            message = (first['message'] as String).trim();
-          } else if (first is String && first.trim().isNotEmpty) {
-            message = first.trim();
-          }
-        }
-      }
-    }
+    String? message = _extractErrorMessage(decoded);
 
     message ??= 'Request failed (${response.statusCode})';
     throw ApiException(statusCode: response.statusCode, message: message);
