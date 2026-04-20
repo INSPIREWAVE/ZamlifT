@@ -131,7 +131,7 @@ class AuthService {
 
     if (token is! String ||
         token.isEmpty ||
-        !_hasJwtStructure(token) ||
+        !_hasBasicJwtFormat(token) ||
         userJson is! Map<String, dynamic>) {
       throw const ApiException(
         statusCode: 500,
@@ -144,5 +144,5 @@ class AuthService {
     return (user: user, token: token);
   }
 
-  bool _hasJwtStructure(String token) => token.split('.').length == 3;
+  bool _hasBasicJwtFormat(String token) => token.split('.').length == 3;
 }
