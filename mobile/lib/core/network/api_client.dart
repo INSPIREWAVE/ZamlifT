@@ -53,12 +53,17 @@ class ApiClient {
       } else if (decoded['error'] is String &&
           (decoded['error'] as String).trim().isNotEmpty) {
         message = (decoded['error'] as String).trim();
-      } else if (decoded['errors'] is List && (decoded['errors'] as List).isNotEmpty) {
-        final first = (decoded['errors'] as List).first;
-        if (first is Map && first['message'] is String) {
-          message = (first['message'] as String).trim();
-        } else if (first is String && first.trim().isNotEmpty) {
-          message = first.trim();
+      } else if (decoded['errors'] is List) {
+        final errors = decoded['errors'] as List;
+        if (errors.isEmpty) {
+          message = null;
+        } else {
+          final first = errors.first;
+          if (first is Map && first['message'] is String) {
+            message = (first['message'] as String).trim();
+          } else if (first is String && first.trim().isNotEmpty) {
+            message = first.trim();
+          }
         }
       }
     }

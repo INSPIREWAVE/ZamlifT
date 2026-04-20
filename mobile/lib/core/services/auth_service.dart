@@ -164,8 +164,7 @@ class AuthService {
   }) {
     final value = raw.trim();
     if (value.isEmpty) return fallback;
-    if (value == 'Exception') return fallback;
-    final cleaned = value.replaceFirst(RegExp(r'^Exception:\s*'), '').trim();
+    final cleaned = value.replaceFirst(RegExp(r'^Exception:?\s*'), '').trim();
     return cleaned.isEmpty ? fallback : cleaned;
   }
 }

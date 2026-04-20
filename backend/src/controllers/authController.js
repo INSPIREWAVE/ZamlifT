@@ -48,10 +48,12 @@ async function register(req, res, next) {
         constraint: error.constraint,
         message: error.message,
       });
-    }
-
-    if (error?.message) {
-      return res.status(400).json({ message: error.message });
+      if (error.code === '23505') {
+        return res.status(400).json({ message: 'Email already exists' });
+      }
+      if (error.code === '23502' || error.code === '22P02') {
+        return res.status(400).json({ message: error.message });
+      }
     }
 
     return next(error);
