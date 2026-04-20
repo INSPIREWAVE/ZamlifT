@@ -2,21 +2,62 @@ const bcrypt = require('bcrypt');
 const { createUser, findUserByEmail } = require('../models/userModel');
 const { signToken } = require('../services/authService');
 
+function buildMissingFieldError(fieldName) {
+  const error = new Error(`${fieldName} is required`);
+  error.status = 400;
+  return error;
+}
+
 async function register(req, res, next) {
   try {
-    const { fullName, email, password, role } = req.validated.body;
+    const requestBody = req.body || {};
+    const { password: _password, ...safeBody } = requestBody;
+    console.log('[auth.register] incoming body:', safeBody);
+    const body = req.validated?.body;
+    if (!body) {
+      const validationError = buildMissingFieldError('Registration payload');
+      console.error('[auth.register] validation error:', validationError.message);
+      throw validationError;
+    }
+    const { fullName, email, password, role, phone } = body;
 
     const existing = await findUserByEmail(email);
     if (existing) {
-      return res.status(409).json({ message: 'Email already registered' });
+      return res.status(409).json({ message: 'Email already exists' });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const user = await createUser({ fullName, email, passwordHash, role });
+    const user = await createUser({
+      fullName,
+      email,
+      passwordHash,
+      role,
+      phone,
+    });
     const token = signToken(user);
 
     return res.status(201).json({ user, token });
   } catch (error) {
+    if (error?.status === 400) {
+      console.error('[auth.register] validation error:', error.message);
+      return res.status(400).json({ message: error.message });
+    }
+
+    if (error?.code || error?.detail) {
+      console.error('[auth.register] database error:', {
+        code: error.code,
+        detail: error.detail,
+        constraint: error.constraint,
+        message: error.message,
+      });
+      if (error.code === '23505') {
+        return res.status(400).json({ message: 'Email already exists' });
+      }
+      if (error.code === '23502' || error.code === '22P02') {
+        return res.status(400).json({ message: 'Invalid or missing registration data' });
+      }
+    }
+
     return next(error);
   }
 }

@@ -43,8 +43,14 @@ class AuthService {
       );
 
       return _extractAndPersistAuthPayload(data);
-    } on ApiException {
-      rethrow;
+    } on ApiException catch (e) {
+      throw ApiException(
+        statusCode: e.statusCode,
+        message: _readableApiMessage(
+          e.message,
+          fallback: 'Unable to register right now.',
+        ),
+      );
     } on TimeoutException {
       throw const ApiException(
         statusCode: 408,
@@ -60,10 +66,13 @@ class AuthService {
         statusCode: 500,
         message: 'Received an invalid server response.',
       );
-    } catch (_) {
-      throw const ApiException(
+    } catch (e) {
+      throw ApiException(
         statusCode: 500,
-        message: 'Unexpected error during registration.',
+        message: _readableApiMessage(
+          e.toString(),
+          fallback: 'Unable to register right now.',
+        ),
       );
     }
   }
@@ -86,8 +95,11 @@ class AuthService {
       );
 
       return _extractAndPersistAuthPayload(data);
-    } on ApiException {
-      rethrow;
+    } on ApiException catch (e) {
+      throw ApiException(
+        statusCode: e.statusCode,
+        message: _readableApiMessage(e.message, fallback: 'Unable to login right now.'),
+      );
     } on TimeoutException {
       throw const ApiException(
         statusCode: 408,
@@ -103,10 +115,10 @@ class AuthService {
         statusCode: 500,
         message: 'Received an invalid server response.',
       );
-    } catch (_) {
-      throw const ApiException(
+    } catch (e) {
+      throw ApiException(
         statusCode: 500,
-        message: 'Unexpected error during login.',
+        message: _readableApiMessage(e.toString(), fallback: 'Unable to login right now.'),
       );
     }
   }
@@ -145,4 +157,14 @@ class AuthService {
   }
 
   bool _hasThreeParts(String token) => token.split('.').length == 3;
+
+  String _readableApiMessage(
+    String raw, {
+    required String fallback,
+  }) {
+    final value = raw.trim();
+    if (value.isEmpty) return fallback;
+    final cleaned = value.replaceFirst(RegExp(r'^Exception:?\s*'), '').trim();
+    return cleaned.isEmpty ? fallback : cleaned;
+  }
 }

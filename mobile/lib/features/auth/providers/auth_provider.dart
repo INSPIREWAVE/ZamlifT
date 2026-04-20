@@ -162,7 +162,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void _setError(String message) {
-    _error = message;
+    final trimmed = message.trim();
+    _error = trimmed.isEmpty ? 'Something went wrong. Please try again.' : trimmed;
     _status = AuthStatus.error;
   }
 

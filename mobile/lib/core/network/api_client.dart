@@ -32,15 +32,49 @@ class ApiClient {
     return headers;
   }
 
+  String? _extractErrorMessage(dynamic decoded) {
+    if (decoded is! Map) return null;
+
+    final rawMessage = decoded['message'];
+    if (rawMessage is String && rawMessage.trim().isNotEmpty) {
+      return rawMessage.trim();
+    }
+
+    final rawError = decoded['error'];
+    if (rawError is String && rawError.trim().isNotEmpty) {
+      return rawError.trim();
+    }
+
+    final rawErrors = decoded['errors'];
+    if (rawErrors is List && rawErrors.isNotEmpty) {
+      final first = rawErrors.first;
+      if (first is Map && first['message'] is String) {
+        return (first['message'] as String).trim();
+      }
+      if (first is String && first.trim().isNotEmpty) {
+        return first.trim();
+      }
+    }
+
+    return null;
+  }
+
   dynamic _parse(http.Response response) {
     final body = response.body.isEmpty ? '{}' : response.body;
-    final decoded = jsonDecode(body);
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(body);
+    } on FormatException {
+      decoded = {'message': body};
+    }
+
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return decoded;
     }
-    final message = (decoded is Map && decoded['message'] is String)
-        ? decoded['message'] as String
-        : 'Request failed (${response.statusCode})';
+
+    String? message = _extractErrorMessage(decoded);
+
+    message ??= 'Request failed (${response.statusCode})';
     throw ApiException(statusCode: response.statusCode, message: message);
   }
 
