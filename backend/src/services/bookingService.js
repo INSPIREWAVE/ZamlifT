@@ -35,31 +35,20 @@ async function createBookingWithSeatReservation({
       throw httpError(404, 'Trip not found');
     }
 
-    if (!['scheduled', 'boarding', 'on_trip'].includes(trip.status)) {
+    if (!['scheduled', 'on_trip'].includes(trip.status)) {
       throw httpError(400, 'Trip is not available for booking');
     }
 
-    const passengerDriverProfileRes = await client.query(
-      `
-        SELECT id
-        FROM driver_profiles
-        WHERE user_id = $1
-        LIMIT 1
-      `,
-      [passengerId]
-    );
-    const passengerDriverProfileId = passengerDriverProfileRes.rows[0]?.id;
-
-    if (passengerDriverProfileId && passengerDriverProfileId === trip.driver_id) {
+    if (passengerId === trip.driver_id) {
       throw httpError(400, 'Driver cannot book own trip');
     }
 
     const stopsRes = await client.query(
       `
-        SELECT id, position
-        FROM stops
-        WHERE route_id = $1
-          AND id = ANY($2::uuid[])
+        SELECT rs.stop_id AS id, rs.sequence_order
+        FROM route_stops rs
+        WHERE rs.route_id = $1
+          AND rs.stop_id = ANY($2::uuid[])
       `,
       [trip.route_id, [pickupStopId, dropoffStopId]]
     );
@@ -73,30 +62,30 @@ async function createBookingWithSeatReservation({
       throw httpError(400, 'Pickup and dropoff stops must belong to the trip route');
     }
 
-    if (pickupStop.position >= dropoffStop.position) {
+    if (pickupStop.sequence_order >= dropoffStop.sequence_order) {
       throw httpError(400, 'Pickup stop must come before dropoff stop on the route');
     }
 
-    if (trip.available_seats < seatsBooked) {
+    if (trip.seats_available < seatsBooked) {
       throw httpError(400, 'Not enough seats available');
     }
 
-    const totalAmount = Number(trip.price) * seatsBooked;
+    const totalPrice = Number(trip.price_per_seat) * seatsBooked;
 
     const bookingRes = await client.query(
       `
-        INSERT INTO bookings (trip_id, passenger_id, pickup_stop_id, dropoff_stop_id, seats_booked, total_amount, status, payment_status)
+        INSERT INTO bookings (trip_id, passenger_id, pickup_stop_id, dropoff_stop_id, seats_booked, total_price, status, payment_status)
         VALUES ($1, $2, $3, $4, $5, $6, 'pending', 'pending')
         RETURNING *
       `,
-      [tripId, passengerId, pickupStopId, dropoffStopId, seatsBooked, totalAmount]
+      [tripId, passengerId, pickupStopId, dropoffStopId, seatsBooked, totalPrice]
     );
 
     const seatReservationRes = await client.query(
       `
         UPDATE trips
-        SET available_seats = available_seats - $2, updated_at = NOW()
-        WHERE id = $1 AND available_seats >= $2
+        SET seats_available = seats_available - $2, updated_at = NOW()
+        WHERE id = $1 AND seats_available >= $2
         RETURNING id
       `,
       [tripId, seatsBooked]
@@ -164,11 +153,9 @@ async function updateBookingStatusWithSeatAdjustment({
       const seatUpdateRes = await client.query(
         `
           UPDATE trips t
-          SET available_seats = t.available_seats + $2, updated_at = NOW()
-          FROM vehicles v
+          SET seats_available = t.seats_available + $2, updated_at = NOW()
           WHERE t.id = $1
-            AND t.vehicle_id = v.id
-            AND t.available_seats + $2 <= v.seat_capacity
+            AND t.seats_available + $2 <= t.seats_total
           RETURNING t.id
         `,
         [booking.trip_id, booking.seats_booked]

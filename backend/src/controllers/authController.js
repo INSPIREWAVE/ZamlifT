@@ -84,6 +84,7 @@ async function login(req, res, next) {
         full_name: user.full_name,
         email: user.email,
         role: user.role,
+        phone: user.phone,
         is_active: user.is_active,
       },
       token,

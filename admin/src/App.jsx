@@ -1,16 +1,29 @@
 import { useEffect, useMemo, useState } from 'react';
 
-const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
+const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const sections = [
-  { key: 'users', title: 'Users', endpoint: '/admin/users' },
-  { key: 'drivers', title: 'Pending Driver Approvals', endpoint: '/admin/drivers/pending' },
-  { key: 'trips', title: 'Trips Monitor', endpoint: '/admin/trips' },
-  { key: 'payments', title: 'Payments', endpoint: '/admin/payments' },
+  { key: 'drivers', title: 'Pending Driver Approvals', endpoint: '/drivers/pending' },
+  { key: 'payments', title: 'Payments', endpoint: '/payments' },
+  { key: 'bookings', title: 'Bookings', endpoint: '/bookings' },
+  { key: 'trips', title: 'Trips Monitor', endpoint: '/trips' },
 ];
 
+async function parseError(response, fallbackMessage) {
+  try {
+    const body = await response.json();
+    if (body?.message && typeof body.message === 'string' && body.message.trim()) {
+      return body.message.trim();
+    }
+  } catch {
+    // ignore parse failures and fallback
+  }
+
+  return fallbackMessage;
+}
+
 function useAdminData(token) {
-  const [data, setData] = useState({ users: [], drivers: [], trips: [], payments: [] });
+  const [data, setData] = useState({ drivers: [], payments: [], bookings: [], trips: [] });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -27,9 +40,13 @@ function useAdminData(token) {
               headers: { Authorization: `Bearer ${token}` },
             });
             if (!response.ok) {
-              throw new Error(`Failed to load ${key}`);
+              const fallback = `${response.status} ${response.statusText || 'Request failed'}`.trim();
+              const message = await parseError(response, fallback);
+              throw new Error(message);
             }
-            return [key, await response.json()];
+
+            const payload = await response.json();
+            return [key, Array.isArray(payload) ? payload : []];
           }),
         );
 
@@ -62,10 +79,10 @@ function App() {
 
   const counts = useMemo(
     () => ({
-      users: data.users.length,
       drivers: data.drivers.length,
       trips: data.trips.length,
       payments: data.payments.length,
+      bookings: data.bookings.length,
     }),
     [data],
   );
@@ -74,7 +91,7 @@ function App() {
     <main className="container">
       <header>
         <h1>ZamLift Admin Dashboard</h1>
-        <p>Manage users, driver approvals, trip activity, and payment lifecycle.</p>
+        <p>Manage bookings, driver approvals, trip activity, and payment lifecycle.</p>
       </header>
 
       <section className="tokenRow">
@@ -91,17 +108,17 @@ function App() {
       {loading ? <p>Loading dashboard data…</p> : null}
 
       <section className="cards">
-        <article className="card"><h2>Users</h2><p>{counts.users}</p></article>
         <article className="card"><h2>Pending Drivers</h2><p>{counts.drivers}</p></article>
         <article className="card"><h2>Trips</h2><p>{counts.trips}</p></article>
         <article className="card"><h2>Payments</h2><p>{counts.payments}</p></article>
+        <article className="card"><h2>Bookings</h2><p>{counts.bookings}</p></article>
       </section>
 
       <section className="grid">
-        <DataTable title="Users" rows={data.users} columns={['id', 'full_name', 'email', 'role']} />
-        <DataTable title="Pending Driver Approvals" rows={data.drivers} columns={['id', 'full_name', 'email', 'verification_status']} />
-        <DataTable title="Trips Monitor" rows={data.trips} columns={['id', 'driver_name', 'start_location', 'destination', 'status']} />
-        <DataTable title="Payments" rows={data.payments} columns={['id', 'booking_id', 'provider', 'amount', 'status']} />
+        <DataTable title="Pending Driver Approvals" rows={data.drivers} columns={['user_id', 'full_name', 'email', 'phone', 'verification_status']} />
+        <DataTable title="Trips Monitor" rows={data.trips} columns={['id', 'driver_name', 'route_name', 'status', 'seats_available']} />
+        <DataTable title="Payments" rows={data.payments} columns={['id', 'booking_id', 'payer_name', 'amount', 'status']} />
+        <DataTable title="Bookings" rows={data.bookings} columns={['id', 'trip_id', 'passenger_name', 'seats_booked', 'total_price', 'status']} />
       </section>
     </main>
   );

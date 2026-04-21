@@ -1,4 +1,4 @@
-const { getUserBookings, getBookingById } = require('../models/bookingModel');
+const { getUserBookings, listAllBookings, getBookingById } = require('../models/bookingModel');
 const { getTripById } = require('../models/tripModel');
 const {
   createBookingWithSeatReservation,
@@ -21,6 +21,15 @@ async function createBookingHandler(req, res, next) {
 async function listMyBookingsHandler(req, res, next) {
   try {
     const bookings = await getUserBookings(req.user.id);
+    return res.json(bookings);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function listBookingsAdminHandler(req, res, next) {
+  try {
+    const bookings = await listAllBookings();
     return res.json(bookings);
   } catch (error) {
     return next(error);
@@ -60,5 +69,6 @@ async function updateBookingStatusHandler(req, res, next) {
 module.exports = {
   createBookingHandler,
   listMyBookingsHandler,
+  listBookingsAdminHandler,
   updateBookingStatusHandler,
 };

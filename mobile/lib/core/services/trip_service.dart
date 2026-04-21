@@ -73,7 +73,7 @@ class TripService {
 
   /// Update the status of a trip (driver or admin).
   ///
-  /// [status]: 'scheduled' | 'ongoing' | 'completed' | 'cancelled'
+  /// [status]: 'scheduled' | 'on_trip' | 'completed' | 'cancelled'
   Future<Trip> updateTripStatus({
     required String tripId,
     required String status,

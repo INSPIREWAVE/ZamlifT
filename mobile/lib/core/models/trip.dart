@@ -29,7 +29,7 @@ class Trip {
   final int seatsTotal;
   final int seatsAvailable;
   final double pricePerSeat;
-  final String status; // 'scheduled' | 'ongoing' | 'completed' | 'cancelled'
+  final String status; // 'scheduled' | 'on_trip' | 'completed' | 'cancelled'
 
   // Joined fields
   final String? routeName;
@@ -41,7 +41,7 @@ class Trip {
   final DateTime? updatedAt;
 
   bool get isBookable =>
-      (status == 'scheduled' || status == 'ongoing') && seatsAvailable > 0;
+      (status == 'scheduled' || status == 'on_trip') && seatsAvailable > 0;
 
   factory Trip.fromJson(Map<String, dynamic> json) => Trip(
         id: json['id'] as String,

@@ -66,8 +66,6 @@ class _TripCard extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
-                    // Pre-load stops for this route so the dialog
-                    // can present proper stop selectors.
                     await context
                         .read<TripProvider>()
                         .loadStopsForRoute(trip.routeId);
@@ -103,7 +101,6 @@ class _TripCard extends StatelessWidget {
                 Text('Route: ${trip.routeName ?? "–"}'),
                 Text('Price/seat: ZMW ${trip.pricePerSeat.toStringAsFixed(2)}'),
                 const SizedBox(height: 12),
-                // Pick-up stop selector
                 const Text('Pick-up stop:',
                     style: TextStyle(fontWeight: FontWeight.w600)),
                 DropdownButton<String>(
@@ -119,7 +116,6 @@ class _TripCard extends StatelessWidget {
                   onChanged: (v) => setState(() => pickupStopId = v),
                 ),
                 const SizedBox(height: 8),
-                // Drop-off stop selector
                 const Text('Drop-off stop:',
                     style: TextStyle(fontWeight: FontWeight.w600)),
                 DropdownButton<String>(
@@ -226,7 +222,7 @@ class _StatusChip extends StatelessWidget {
 
   Color get _color => switch (status) {
         'scheduled' => Colors.blue,
-        'ongoing' => Colors.green,
+        'on_trip' => Colors.green,
         'completed' => Colors.grey,
         'cancelled' => Colors.red,
         _ => Colors.blueGrey,
